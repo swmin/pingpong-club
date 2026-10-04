@@ -17,6 +17,31 @@ import SessionSelectModal from './components/SessionSelectModal';
 
 import { Grid, Calendar } from 'lucide-react';
 
+// Safe localStorage helper with in-memory fallback for Android WebViews / Galaxy Tab file:// Security Restrictions
+const memoryStorage = {};
+const safeGetItem = (key) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch (e) {
+    console.warn('localStorage getItem blocked on this context, using memory fallback', e);
+  }
+  return memoryStorage[key] || null;
+};
+
+const safeSetItem = (key, value) => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+      return;
+    }
+  } catch (e) {
+    console.warn('localStorage setItem blocked on this context, using memory fallback', e);
+  }
+  memoryStorage[key] = value;
+};
+
 export default function App() {
   // Multi-Club States
   const [clubs, setClubs] = useState([]);
@@ -48,8 +73,8 @@ export default function App() {
 
   // Initialize dataset & handle migration to multi-club & multi-session
   useEffect(() => {
-    const savedClubs = localStorage.getItem('tt_clubs_data_v2');
-    const savedActiveId = localStorage.getItem('tt_active_club_id');
+    const savedClubs = safeGetItem('tt_clubs_data_v2');
+    const savedActiveId = safeGetItem('tt_active_club_id');
 
     if (savedClubs) {
       try {
@@ -122,9 +147,9 @@ export default function App() {
   // Sync clubs & active ID to localstorage
   useEffect(() => {
     if (clubs.length > 0) {
-      localStorage.setItem('tt_clubs_data_v2', JSON.stringify(clubs));
+      safeSetItem('tt_clubs_data_v2', JSON.stringify(clubs));
       if (activeClubId) {
-        localStorage.setItem('tt_active_club_id', activeClubId);
+        safeSetItem('tt_active_club_id', activeClubId);
       }
     }
   }, [clubs, activeClubId]);
