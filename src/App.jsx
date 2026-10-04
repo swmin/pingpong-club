@@ -71,6 +71,7 @@ export default function App() {
     const initialClub = {
       id: 'c_default',
       name: defaultTitle,
+      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
       players: defaultPlayers,
       matches: defaultMatches,
       createdAt: Date.now(),
@@ -100,6 +101,7 @@ export default function App() {
   const activeClub = clubs.find(c => c.id === activeClubId) || clubs[0] || {
     id: 'c_fallback',
     name: '동호회',
+    masterRoster: [],
     players: [],
     matches: [],
   };
@@ -107,6 +109,12 @@ export default function App() {
   const players = activeClub.players || [];
   const matches = activeClub.matches || [];
   const leagueTitle = activeClub.name || '동호회';
+
+  const masterRoster = activeClub.masterRoster || PAPER_SAMPLE_PLAYERS.map(p => ({
+    ...p,
+    category: p.category || 'club',
+    currentDivision: p.currentDivision || p.division || '7부',
+  }));
 
   // Helper to update active club properties
   const updateActiveClub = (updater) => {
@@ -126,6 +134,7 @@ export default function App() {
     const newClub = {
       id: newId,
       name,
+      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
       players: PAPER_SAMPLE_PLAYERS,
       matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
       createdAt: Date.now(),
@@ -151,6 +160,42 @@ export default function App() {
     if (activeClubId === id) {
       setActiveClubId(updatedClubs[0].id);
     }
+  };
+
+  // Update Master Roster
+  const handleUpdateMasterRoster = (newRoster) => {
+    updateActiveClub({ masterRoster: newRoster });
+  };
+
+  // Toggle Participant Check-in for current meeting
+  const handleToggleParticipant = (player) => {
+    const isCurrentlyChecked = players.some(p => p.id === player.id);
+    let updatedParticipants;
+    if (isCurrentlyChecked) {
+      updatedParticipants = players.filter(p => p.id !== player.id);
+    } else {
+      const newParticipant = {
+        id: player.id,
+        name: player.name,
+        division: player.currentDivision || player.division || '7부',
+        avatarColor: player.avatarColor || '#3b82f6',
+        category: player.category || 'club',
+      };
+      updatedParticipants = [...players, newParticipant];
+    }
+    const newMatches = generateSchedule(updatedParticipants);
+    updateActiveClub({ players: updatedParticipants, matches: newMatches });
+  };
+
+  // Update division for TODAY's meeting date only (Preserves past meeting history!)
+  const handleUpdateParticipantDivision = (playerId, newDivision) => {
+    const updatedParticipants = players.map(p => {
+      if (p.id === playerId) {
+        return { ...p, division: newDivision };
+      }
+      return p;
+    });
+    updateActiveClub({ players: updatedParticipants });
   };
 
   // Rename Club Title
@@ -224,10 +269,13 @@ export default function App() {
           clubsCount={clubs.length}
         />
 
-        {/* 1) 참가 선수 명단 */}
+        {/* 1) 3개 카테고리 (동호회/Guest/선수관리) 기반 참가 선수 명단 */}
         <PlayerManager
-          players={players}
-          setPlayers={setPlayers}
+          masterRoster={masterRoster}
+          onUpdateMasterRoster={handleUpdateMasterRoster}
+          activeParticipants={players}
+          onToggleParticipant={handleToggleParticipant}
+          onUpdateParticipantDivision={handleUpdateParticipantDivision}
           onGenerateNewSchedule={handleGenerateNewSchedule}
         />
 
