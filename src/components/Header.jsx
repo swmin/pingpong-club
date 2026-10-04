@@ -172,21 +172,47 @@ export default function Header({
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Calendar size={16} color="var(--accent-primary)" />
                 {isEditingDate ? (
-                  <input
-                    type="date"
-                    value={currentDateValue}
-                    onChange={e => setMeetingDate(e.target.value)}
-                    onBlur={() => setIsEditingDate(false)}
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--accent-primary)',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-main)',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                    }}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="date"
+                      value={currentDateValue}
+                      onChange={e => {
+                        if (e.target.value) setMeetingDate(e.target.value);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') setIsEditingDate(false);
+                      }}
+                      onBlur={() => {
+                        // Small timeout to allow button click if tapped
+                        setTimeout(() => setIsEditingDate(false), 150);
+                      }}
+                      autoFocus
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        border: '2px solid var(--accent-primary)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                      }}
+                    />
+                    <button
+                      onClick={() => setIsEditingDate(false)}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--accent-success)',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      확인
+                    </button>
+                  </div>
                 ) : (
                   <span
                     onClick={() => setIsEditingDate(true)}
