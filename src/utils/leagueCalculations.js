@@ -8,9 +8,21 @@
  */
 
 // Generate Round Robin Schedule using Berger/Circle Method
-export function generateSchedule(players) {
+// Preserves existing match scores/status if existingMatches array is passed
+export function generateSchedule(players, existingMatches = []) {
   const n = players.length;
   if (n < 2) return [];
+
+  // Build a lookup map for existing match scores by pair of player IDs
+  const existingMap = {};
+  if (Array.isArray(existingMatches)) {
+    existingMatches.forEach(m => {
+      if (m && m.playerAId && m.playerBId) {
+        existingMap[`${m.playerAId}___${m.playerBId}`] = m;
+        existingMap[`${m.playerBId}___${m.playerAId}`] = m;
+      }
+    });
+  }
 
   const playerIds = players.map(p => p.id);
   const isOdd = n % 2 !== 0;
@@ -37,16 +49,36 @@ export function generateSchedule(players) {
       const p2 = list[p2Index];
 
       if (p1 !== null && p2 !== null) {
+        const existing = existingMap[`${p1}___${p2}`];
+        let playerASets = 0;
+        let playerBSets = 0;
+        let status = 'pending';
+        let winnerId = null;
+
+        if (existing) {
+          if (existing.playerAId === p1 && existing.playerBId === p2) {
+            playerASets = existing.playerASets || 0;
+            playerBSets = existing.playerBSets || 0;
+            status = existing.status || 'pending';
+            winnerId = existing.winnerId || null;
+          } else if (existing.playerAId === p2 && existing.playerBId === p1) {
+            playerASets = existing.playerBSets || 0;
+            playerBSets = existing.playerASets || 0;
+            status = existing.status || 'pending';
+            winnerId = existing.winnerId || null;
+          }
+        }
+
         matches.push({
           id: `M_${p1}_${p2}`,
           orderNumber: matchId++,
           round: round + 1,
           playerAId: p1,
           playerBId: p2,
-          playerASets: 0,
-          playerBSets: 0,
-          status: 'pending', // 'pending' | 'completed' | 'forfeit'
-          winnerId: null,
+          playerASets,
+          playerBSets,
+          status,
+          winnerId,
         });
       }
     }

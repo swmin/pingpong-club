@@ -292,7 +292,7 @@ export default function App() {
       };
       updatedParticipants = [...players, newParticipant];
     }
-    const newMatches = generateSchedule(updatedParticipants);
+    const newMatches = generateSchedule(updatedParticipants, matches);
     updateActiveSession({ players: updatedParticipants, matches: newMatches });
   };
 
@@ -312,16 +312,16 @@ export default function App() {
     updateActiveClub({ name: newName });
   };
 
-  // Generate fresh schedule for active session
+  // Generate schedule for active session (preserving scores)
   const handleGenerateNewSchedule = (newPlayers) => {
-    const newMatches = generateSchedule(newPlayers);
+    const newMatches = generateSchedule(newPlayers, matches);
     updateActiveSession({ players: newPlayers, matches: newMatches });
   };
 
-  // Reset active session schedule
+  // Reset active session schedule (explicitly reset scores)
   const handleResetLeague = () => {
     if (confirm(`'${meetingDate}' 모임의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
-      const freshMatches = generateSchedule(players);
+      const freshMatches = generateSchedule(players, []);
       updateActiveSession({ matches: freshMatches });
     }
   };
