@@ -27,12 +27,6 @@ export default function SeniorFontControls({
           >
             크게
           </button>
-          <button
-            className={`font-btn ${fontScale === 1.4 ? 'active' : ''}`}
-            onClick={() => setFontScale(1.4)}
-          >
-            아주 크게 🔍
-          </button>
         </div>
       </div>
 
