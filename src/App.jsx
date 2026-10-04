@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PAPER_SAMPLE_PLAYERS, generatePaperSampleMatches } from './utils/sampleData';
-import { generateSchedule, calculateRankings } from './utils/leagueCalculations';
+import { generateSchedule, calculateRankings, calculateCumulativeRankings } from './utils/leagueCalculations';
 
 import SeniorFontControls from './components/SeniorFontControls';
 import Header from './components/Header';
@@ -336,6 +336,9 @@ export default function App() {
   // Calculate live rankings & tie-breakers for active session
   const { rankings, tieBreakerExplanations } = calculateRankings(players, matches);
 
+  // Calculate cumulative all-time career rankings for active club
+  const cumulativeResult = calculateCumulativeRankings(masterRoster, activeClub.sessions || []);
+
   // Map of ranking by player id for quick matrix header display
   const rankingsMap = {};
   rankings.forEach(r => { rankingsMap[r.id] = r; });
@@ -419,10 +422,14 @@ export default function App() {
           />
         )}
 
-        {/* 3) 실시간 대회 순위표 */}
+        {/* 3) 실시간 대회 순위표 & 동호회 통산 누적 순위표 */}
         <RankingTable
           rankings={rankings}
           tieBreakerExplanations={tieBreakerExplanations}
+          cumulativeRankings={cumulativeResult.rankings}
+          cumulativeTieBreakerExplanations={cumulativeResult.tieBreakerExplanations}
+          clubName={leagueTitle}
+          sessionsCount={sessions.length}
           onOpenTieBreakerModal={() => setIsTieBreakerOpen(true)}
         />
       </div>

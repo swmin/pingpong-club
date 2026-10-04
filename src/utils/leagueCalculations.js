@@ -58,7 +58,7 @@ export function generateSchedule(players) {
   return matches;
 }
 
-// Calculate comprehensive statistics & rankings
+// Calculate comprehensive statistics & rankings (for a single meeting or cumulative)
 export function calculateRankings(players, matches) {
   if (!players || players.length === 0) return { rankings: [], tieBreakerExplanations: [] };
 
@@ -69,7 +69,7 @@ export function calculateRankings(players, matches) {
       player: p,
       id: p.id,
       name: p.name,
-      division: p.division,
+      division: p.division || p.currentDivision || '7부',
       matchesPlayed: 0,
       wins: 0,
       losses: 0,
@@ -83,12 +83,12 @@ export function calculateRankings(players, matches) {
   });
 
   // Map of direct match results between any two players
-  // directResults[p1Id][p2Id] = { playerASets, playerBSets, winnerId }
+  // directResults[p1Id][p2Id] = { mySets, oppSets, myWins, oppWins }
   const directResults = {};
   players.forEach(p1 => {
     directResults[p1.id] = {};
     players.forEach(p2 => {
-      directResults[p1.id][p2.id] = null;
+      directResults[p1.id][p2.id] = { mySets: 0, oppSets: 0, myWins: 0, oppWins: 0 };
     });
   });
 
@@ -109,23 +109,26 @@ export function calculateRankings(players, matches) {
     pB.setsWon += m.playerBSets;
     pB.setsLost += m.playerASets;
 
-    directResults[m.playerAId][m.playerBId] = {
-      mySets: m.playerASets,
-      oppSets: m.playerBSets,
-      winnerId: m.winnerId,
-    };
-    directResults[m.playerBId][m.playerAId] = {
-      mySets: m.playerBSets,
-      oppSets: m.playerASets,
-      winnerId: m.winnerId,
-    };
+    const h2hA = directResults[m.playerAId][m.playerBId];
+    const h2hB = directResults[m.playerBId][m.playerAId];
 
-    if (m.winnerId === pA.id) {
-      pA.wins += 1;
-      pB.losses += 1;
-    } else if (m.winnerId === pB.id) {
-      pB.wins += 1;
-      pA.losses += 1;
+    if (h2hA && h2hB) {
+      h2hA.mySets += m.playerASets;
+      h2hA.oppSets += m.playerBSets;
+      h2hB.mySets += m.playerBSets;
+      h2hB.oppSets += m.playerASets;
+
+      if (m.winnerId === pA.id) {
+        pA.wins += 1;
+        pB.losses += 1;
+        h2hA.myWins += 1;
+        h2hB.oppWins += 1;
+      } else if (m.winnerId === pB.id) {
+        pB.wins += 1;
+        pA.losses += 1;
+        h2hB.myWins += 1;
+        h2hA.oppWins += 1;
+      }
     }
   });
 
@@ -135,9 +138,12 @@ export function calculateRankings(players, matches) {
     st.setRatio = st.setsLost > 0 ? st.setsWon / st.setsLost : (st.setsWon > 0 ? st.setsWon * 100 : 0);
   });
 
+  // Filter out players with 0 matches played if calculating cumulative stats
+  const activeStatsList = Object.values(statsMap).filter(st => st.matchesPlayed > 0);
+
   // 2. Group players by Wins
   const winsGroups = {};
-  Object.values(statsMap).forEach(st => {
+  activeStatsList.forEach(st => {
     if (!winsGroups[st.wins]) winsGroups[st.wins] = [];
     winsGroups[st.wins].push(st);
   });
@@ -159,27 +165,46 @@ export function calculateRankings(players, matches) {
       const [p1, p2] = group;
       const h2h = directResults[p1.id][p2.id];
 
-      if (h2h && h2h.winnerId) {
-        if (h2h.winnerId === p1.id) {
-          p1.tieReason = `승자승 (${p1.name} 승 vs ${p2.name})`;
-          p2.tieReason = `승자승 (${p1.name} 승 vs ${p2.name})`;
+      if (h2h && (h2h.myWins > 0 || h2h.oppWins > 0)) {
+        if (h2h.myWins > h2h.oppWins) {
+          p1.tieReason = `승자승 (${p1.name} ${h2h.myWins}승 vs ${p2.name} ${h2h.oppWins}승)`;
+          p2.tieReason = `승자승 (${p1.name} ${h2h.myWins}승 vs ${p2.name} ${h2h.oppWins}승)`;
           finalRankedList.push(p1, p2);
           tieBreakerExplanations.push({
             type: '2way',
             players: [p1.name, p2.name],
             wins: winCount,
-            description: `${winCount}승 동률: ${p1.name}님이 ${p2.name}님과의 상대 전적(승자승)에서 승리하여 상위 순위 지정`,
+            description: `${winCount}승 동률: ${p1.name}님이 ${p2.name}님과의 상대 전적(승자승 ${h2h.myWins}:${h2h.oppWins})에서 승리하여 상위 순위 지정`,
           });
-        } else {
-          p1.tieReason = `승자승 (${p2.name} 승 vs ${p1.name})`;
-          p2.tieReason = `승자승 (${p2.name} 승 vs ${p1.name})`;
+        } else if (h2h.oppWins > h2h.myWins) {
+          p1.tieReason = `승자승 (${p2.name} ${h2h.oppWins}승 vs ${p1.name} ${h2h.myWins}승)`;
+          p2.tieReason = `승자승 (${p2.name} ${h2h.oppWins}승 vs ${p1.name} ${h2h.myWins}승)`;
           finalRankedList.push(p2, p1);
           tieBreakerExplanations.push({
             type: '2way',
             players: [p1.name, p2.name],
             wins: winCount,
-            description: `${winCount}승 동률: ${p2.name}님이 ${p1.name}님과의 상대 전적(승자승)에서 승리하여 상위 순위 지정`,
+            description: `${winCount}승 동률: ${p2.name}님이 ${p1.name}님과의 상대 전적(승자승 ${h2h.oppWins}:${h2h.myWins})에서 승리하여 상위 순위 지정`,
           });
+        } else {
+          // Equal H2H wins, fallback to H2H set ratio
+          if (h2h.mySets !== h2h.oppSets) {
+            if (h2h.mySets > h2h.oppSets) {
+              finalRankedList.push(p1, p2);
+            } else {
+              finalRankedList.push(p2, p1);
+            }
+            group.forEach(g => (g.tieReason = '상대 전적 세트 득실율'));
+          } else {
+            // Fallback to overall set ratio
+            if (p1.setRatio !== p2.setRatio) {
+              group.sort((a, b) => b.setRatio - a.setRatio);
+            } else {
+              group.sort((a, b) => b.setDiff - a.setDiff);
+            }
+            group.forEach(g => (g.tieReason = '전체 세트 득실율'));
+            finalRankedList.push(...group);
+          }
         }
       } else {
         // Fallback to total set ratio
@@ -193,7 +218,6 @@ export function calculateRankings(players, matches) {
       }
     } else {
       // --- 3+-WAY TIE: SUBGROUP SET RATIO (해당 선수들 간의 세트 득실율) ---
-      const groupPlayerIds = new Set(group.map(g => g.id));
       const subgroupStats = group.map(p => {
         let subWon = 0;
         let subLost = 0;
@@ -253,4 +277,51 @@ export function calculateRankings(players, matches) {
     rankings: finalRankedList,
     tieBreakerExplanations,
   };
+}
+
+// Calculate All-time Cumulative Career Rankings for a specific club's sessions ONLY
+export function calculateCumulativeRankings(masterRoster, sessions) {
+  if (!sessions || sessions.length === 0) return { rankings: [], tieBreakerExplanations: [] };
+
+  // Collect all completed matches from all sessions of THIS club only
+  const allMatches = [];
+  sessions.forEach(session => {
+    if (Array.isArray(session.matches)) {
+      allMatches.push(...session.matches);
+    }
+  });
+
+  // Build players array using master roster + any session participants
+  const playerMap = {};
+  if (masterRoster && Array.isArray(masterRoster)) {
+    masterRoster.forEach(p => {
+      playerMap[p.id] = {
+        id: p.id,
+        name: p.name,
+        division: p.currentDivision || p.division || '7부',
+        avatarColor: p.avatarColor || '#3b82f6',
+        category: p.category || 'club',
+      };
+    });
+  }
+
+  // Ensure any player appearing in session matches is included
+  sessions.forEach(session => {
+    if (Array.isArray(session.players)) {
+      session.players.forEach(p => {
+        if (!playerMap[p.id]) {
+          playerMap[p.id] = {
+            id: p.id,
+            name: p.name,
+            division: p.division || '7부',
+            avatarColor: p.avatarColor || '#3b82f6',
+            category: p.category || 'club',
+          };
+        }
+      });
+    }
+  });
+
+  const allPlayers = Object.values(playerMap);
+  return calculateRankings(allPlayers, allMatches);
 }
