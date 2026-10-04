@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, UserPlus, Check, Plus, Edit2, Trash2, Shield, UserCheck, Search } from 'lucide-react';
 
-const DIVISIONS = ['1부', '2부', '3부', '4부', '5부', '6부', '7부', '8부', '9부', '선수부'];
+const DIVISIONS = ['선수부', '1부', '2부', '3부', '4부', '5부', '6부', '7부', '8부', '9부', '10부', '11부', '12부', '13부'];
 const AVATAR_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b',
   '#06b6d4', '#6366f1', '#84cc16', '#f43f5e', '#a855f7'
