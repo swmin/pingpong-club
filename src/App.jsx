@@ -88,6 +88,15 @@ export default function App() {
       }
     }
 
+    // Check if embedded initial data exists (from exported pre-populated HTML)
+    if (window.INITIAL_EMBEDDED_DATA && Array.isArray(window.INITIAL_EMBEDDED_DATA.clubs) && window.INITIAL_EMBEDDED_DATA.clubs.length > 0) {
+      const embeddedClubs = window.INITIAL_EMBEDDED_DATA.clubs;
+      const embeddedActiveId = window.INITIAL_EMBEDDED_DATA.activeClubId;
+      setClubs(embeddedClubs);
+      setActiveClubId(embeddedActiveId && embeddedClubs.some(c => c.id === embeddedActiveId) ? embeddedActiveId : embeddedClubs[0].id);
+      return;
+    }
+
     // Default Club & Initial Session
     const initialSession = {
       id: 's_default',
@@ -318,12 +327,95 @@ export default function App() {
     updateActiveSession({ players: newPlayers, matches: newMatches });
   };
 
-  // Reset active session schedule (explicitly reset scores)
+  // Reset active session schedule
   const handleResetLeague = () => {
     if (confirm(`'${meetingDate}' 모임의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
       const freshMatches = generateSchedule(players, []);
       updateActiveSession({ matches: freshMatches });
     }
+  };
+
+  // 1) Export HTML containing embedded current data (for OneDrive / Smartphone / Tablet)
+  const handleExportEmbeddedHTML = () => {
+    const dataPayload = {
+      clubs,
+      activeClubId,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const jsonStr = JSON.stringify(dataPayload);
+    let htmlContent = '<!doctype html>\n' + document.documentElement.outerHTML;
+
+    // Replace or insert embedded script tag
+    const embeddedScriptRegex = /<script id="embedded-data">[\s\S]*?<\/script>/gi;
+    const newScriptTag = `<script id="embedded-data">\n  window.INITIAL_EMBEDDED_DATA = ${jsonStr};\n</script>`;
+
+    if (embeddedScriptRegex.test(htmlContent)) {
+      htmlContent = htmlContent.replace(embeddedScriptRegex, newScriptTag);
+    } else if (htmlContent.includes('</head>')) {
+      htmlContent = htmlContent.replace('</head>', `${newScriptTag}\n</head>`);
+    } else {
+      htmlContent = newScriptTag + '\n' + htmlContent;
+    }
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pingpong-club-scoreboard.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert(`🎉 현재 동호회의 전체 ${sessions.length}개 모임 데이터가 내장된 pingpong-club-scoreboard.html 파일이 다운로드되었습니다!\n\n이 다운로드된 파일(pingpong-club-scoreboard.html)을 원드라이브(OneDrive)에 올리신 후 휴대폰이나 갤럭시탭에서 열면 복원 절차 없이 6회차 기록이 그대로 바로 나타납니다.`);
+  };
+
+  // 2) Export JSON Backup File
+  const handleExportJSON = () => {
+    const dataPayload = {
+      clubs,
+      activeClubId,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const jsonStr = JSON.stringify(dataPayload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const cleanTitle = (leagueTitle || 'pingpong').replace(/[\/\\:*?"<>|]/g, '_');
+    link.download = `${meetingDate}_${cleanTitle}_백업.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // 3) Import JSON Backup File
+  const handleImportJSON = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (parsed && Array.isArray(parsed.clubs) && parsed.clubs.length > 0) {
+          setClubs(parsed.clubs);
+          if (parsed.activeClubId) {
+            setActiveClubId(parsed.activeClubId);
+          }
+          alert('✅ 백업 파일의 모임 데이터가 성공적으로 복원되었습니다!');
+        } else {
+          alert('⚠️ 백업 파일 형식이 올바르지 않습니다.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ 백업 파일을 읽는 중 오류가 발생했습니다.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Save match score from ScoreModal
@@ -354,6 +446,9 @@ export default function App() {
         ttsEnabled={ttsEnabled}
         setTtsEnabled={setTtsEnabled}
         onResetLeague={handleResetLeague}
+        onExportEmbeddedHTML={handleExportEmbeddedHTML}
+        onExportJSON={handleExportJSON}
+        onImportJSON={handleImportJSON}
       />
 
       {/* Export Target Container (Captured when clicking 결과저장) */}
