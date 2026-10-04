@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
-import { Trophy, Download, Calendar, Users, HelpCircle } from 'lucide-react';
+import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import confetti from 'canvas-confetti';
 
-export default function Header({ leagueTitle, setLeagueTitle, playersCount, completedMatchesCount, totalMatchesCount, onOpenHelp }) {
+export default function Header({
+  leagueTitle,
+  setLeagueTitle,
+  playersCount,
+  completedMatchesCount,
+  totalMatchesCount,
+  onOpenHelp,
+  onOpenCreateModal,
+  onOpenSelectModal,
+  clubsCount,
+}) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   // Export Header (Title, Date), Player List, Matrix Grid, Leaderboard as PNG Image
@@ -59,44 +69,80 @@ export default function Header({ leagueTitle, setLeagueTitle, playersCount, comp
           </div>
 
           <div>
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={leagueTitle}
-                onChange={e => setLeagueTitle(e.target.value)}
-                onBlur={() => setIsEditingTitle(false)}
-                onKeyDown={e => e.key === 'Enter' && setIsEditingTitle(false)}
-                autoFocus
-                style={{
-                  fontSize: '24px',
-                  fontWeight: '800',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  border: '2px solid var(--accent-primary)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                }}
-              />
-            ) : (
-              <h1
-                onClick={() => setIsEditingTitle(true)}
-                style={{
-                  fontSize: 'calc(var(--font-xl) * 1.1)',
-                  fontWeight: '900',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                title="클릭하여 모임 이름 수정"
-              >
-                {leagueTitle}
-                <span data-html2canvas-ignore="true" style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '600' }}>[수정]</span>
-              </h1>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {isEditingTitle ? (
+                <input
+                  type="text"
+                  value={leagueTitle}
+                  onChange={e => setLeagueTitle(e.target.value)}
+                  onBlur={() => setIsEditingTitle(false)}
+                  onKeyDown={e => e.key === 'Enter' && setIsEditingTitle(false)}
+                  autoFocus
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: '800',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    border: '2px solid var(--accent-primary)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              ) : (
+                <h1
+                  onClick={() => setIsEditingTitle(true)}
+                  style={{
+                    fontSize: 'calc(var(--font-xl) * 1.1)',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  title="클릭하여 동호회 이름 수정"
+                >
+                  {leagueTitle}
+                  <span data-html2canvas-ignore="true" style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '600' }}>[수정]</span>
+                </h1>
+              )}
+
+              {/* Create Club & Select Club Buttons next to Club Name */}
+              <div data-html2canvas-ignore="true" style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  className="btn-secondary"
+                  onClick={onOpenCreateModal}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                    color: 'var(--accent-primary)',
+                    borderColor: 'var(--accent-primary)',
+                  }}
+                  title="새로운 동호회 생성 팝업 열기"
+                >
+                  <PlusCircle size={15} />
+                  <span>동호회 생성</span>
+                </button>
+
+                <button
+                  className="btn-secondary"
+                  onClick={onOpenSelectModal}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                  }}
+                  title="등록된 동호회 목록 보기 및 전환"
+                >
+                  <Building2 size={15} />
+                  <span>동호회 목록 ({clubsCount}개) ▼</span>
+                </button>
+              </div>
+            </div>
 
             {/* Date and Participant info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '6px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700', color: 'var(--text-main)' }}>
                 <Calendar size={16} color="var(--accent-primary)" /> {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
               </span>

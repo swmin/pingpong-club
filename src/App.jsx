@@ -10,54 +10,85 @@ import ScheduleView from './components/ScheduleView';
 import RankingTable from './components/RankingTable';
 import ScoreModal from './components/ScoreModal';
 import TieBreakerExplainer from './components/TieBreakerExplainer';
+import CreateClubModal from './components/CreateClubModal';
+import ClubSelectModal from './components/ClubSelectModal';
 
 import { Grid, Calendar } from 'lucide-react';
 
 export default function App() {
-  // App States
-  const [leagueTitle, setLeagueTitle] = useState('정정회 (정정숙 회장, 정용호 총무)');
-  const [players, setPlayers] = useState(PAPER_SAMPLE_PLAYERS);
-  const [matches, setMatches] = useState([]);
+  // Multi-Club States
+  const [clubs, setClubs] = useState([]);
+  const [activeClubId, setActiveClubId] = useState('');
+
+  // Modals Toggle
+  const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
+  const [isSelectClubOpen, setIsSelectClubOpen] = useState(false);
+  const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
+
+  // Active View & Score Modal
   const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'schedule'
   const [selectedMatch, setSelectedMatch] = useState(null);
 
   // Senior Accessibility States
   const [fontScale, setFontScale] = useState(1.0); // Default font scale: 보통 (1.0)
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
 
-  // Initialize dataset from localstorage or paper sample
+  // Initialize dataset & handle migration to multi-club
   useEffect(() => {
-    const saved = localStorage.getItem('tt_league_data_v1');
-    if (saved) {
+    const savedClubs = localStorage.getItem('tt_clubs_data_v2');
+    const savedActiveId = localStorage.getItem('tt_active_club_id');
+
+    if (savedClubs) {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed.leagueTitle) {
-          setLeagueTitle(parsed.leagueTitle === '풀리그 금요 개인전 (번개리그)' ? '정정회 (정정숙 회장, 정용호 총무)' : parsed.leagueTitle);
+        const parsedClubs = JSON.parse(savedClubs);
+        if (Array.isArray(parsedClubs) && parsedClubs.length > 0) {
+          setClubs(parsedClubs);
+          setActiveClubId(savedActiveId && parsedClubs.some(c => c.id === savedActiveId) ? savedActiveId : parsedClubs[0].id);
+          return;
         }
-        if (parsed.players) setPlayers(parsed.players);
-        if (parsed.matches) setMatches(parsed.matches);
-        return;
       } catch (e) {
-        console.error('Failed to parse localstorage data', e);
+        console.error('Failed to parse v2 multi-clubs data', e);
       }
     }
 
-    // Default to Paper Sample Data
-    const defaultMatches = generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS);
-    setMatches(defaultMatches);
+    // Migration from v1 single-club data or initialize default club
+    let defaultTitle = '정정회 (정정숙 회장, 정용호 총무)';
+    let defaultPlayers = PAPER_SAMPLE_PLAYERS;
+    let defaultMatches = generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS);
+
+    const legacyV1 = localStorage.getItem('tt_league_data_v1');
+    if (legacyV1) {
+      try {
+        const parsedV1 = JSON.parse(legacyV1);
+        if (parsedV1.leagueTitle) defaultTitle = parsedV1.leagueTitle;
+        if (parsedV1.players) defaultPlayers = parsedV1.players;
+        if (parsedV1.matches) defaultMatches = parsedV1.matches;
+      } catch (e) {
+        console.error('Failed to parse v1 legacy data', e);
+      }
+    }
+
+    const initialClub = {
+      id: 'c_default',
+      name: defaultTitle,
+      players: defaultPlayers,
+      matches: defaultMatches,
+      createdAt: Date.now(),
+    };
+
+    setClubs([initialClub]);
+    setActiveClubId(initialClub.id);
   }, []);
 
-  // Sync to localstorage
+  // Sync clubs & active ID to localstorage
   useEffect(() => {
-    if (matches.length > 0) {
-      localStorage.setItem('tt_league_data_v1', JSON.stringify({
-        leagueTitle,
-        players,
-        matches,
-      }));
+    if (clubs.length > 0) {
+      localStorage.setItem('tt_clubs_data_v2', JSON.stringify(clubs));
+      if (activeClubId) {
+        localStorage.setItem('tt_active_club_id', activeClubId);
+      }
     }
-  }, [leagueTitle, players, matches]);
+  }, [clubs, activeClubId]);
 
   // Apply font scale to root DOM
   useEffect(() => {
@@ -65,28 +96,95 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', 'dark');
   }, [fontScale]);
 
-  // Generate fresh empty schedule when players change
-  const handleGenerateNewSchedule = (newPlayers) => {
-    const newMatches = generateSchedule(newPlayers);
-    setMatches(newMatches);
+  // Get current active club
+  const activeClub = clubs.find(c => c.id === activeClubId) || clubs[0] || {
+    id: 'c_fallback',
+    name: '동호회',
+    players: [],
+    matches: [],
   };
 
-  // Reset current league to empty pending matches
+  const players = activeClub.players || [];
+  const matches = activeClub.matches || [];
+  const leagueTitle = activeClub.name || '동호회';
+
+  // Helper to update active club properties
+  const updateActiveClub = (updater) => {
+    setClubs(prevClubs =>
+      prevClubs.map(c => {
+        if (c.id === activeClub.id) {
+          return typeof updater === 'function' ? updater(c) : { ...c, ...updater };
+        }
+        return c;
+      })
+    );
+  };
+
+  // 1) Create New Club
+  const handleCreateClub = (name) => {
+    const newId = `c_${Date.now()}`;
+    const newClub = {
+      id: newId,
+      name,
+      players: PAPER_SAMPLE_PLAYERS,
+      matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+      createdAt: Date.now(),
+    };
+
+    setClubs(prev => [...prev, newClub]);
+    setActiveClubId(newId);
+  };
+
+  // 2) Select Club
+  const handleSelectClub = (id) => {
+    setActiveClubId(id);
+  };
+
+  // 3) Delete Club
+  const handleDeleteClub = (id) => {
+    if (clubs.length <= 1) {
+      alert('최소 1개의 동호회가 존재해야 합니다.');
+      return;
+    }
+    const updatedClubs = clubs.filter(c => c.id !== id);
+    setClubs(updatedClubs);
+    if (activeClubId === id) {
+      setActiveClubId(updatedClubs[0].id);
+    }
+  };
+
+  // Rename Club Title
+  const setLeagueTitle = (newName) => {
+    updateActiveClub({ name: newName });
+  };
+
+  // Set players list for active club
+  const setPlayers = (newPlayers) => {
+    updateActiveClub({ players: newPlayers });
+  };
+
+  // Generate fresh schedule for active club
+  const handleGenerateNewSchedule = (newPlayers) => {
+    const newMatches = generateSchedule(newPlayers);
+    updateActiveClub({ players: newPlayers, matches: newMatches });
+  };
+
+  // Reset active club schedule
   const handleResetLeague = () => {
-    if (confirm('현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?')) {
+    if (confirm(`'${leagueTitle}' 동호회의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
       const freshMatches = generateSchedule(players);
-      setMatches(freshMatches);
+      updateActiveClub({ matches: freshMatches });
     }
   };
 
   // Save match score from ScoreModal
   const handleSaveScore = (updatedMatch) => {
     const nextMatches = matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);
-    setMatches(nextMatches);
+    updateActiveClub({ matches: nextMatches });
     setSelectedMatch(null);
   };
 
-  // Calculate live rankings & tie-breakers
+  // Calculate live rankings & tie-breakers for active club
   const { rankings, tieBreakerExplanations } = calculateRankings(players, matches);
 
   // Map of ranking by player id for quick matrix header display
@@ -116,6 +214,9 @@ export default function App() {
           completedMatchesCount={completedCount}
           totalMatchesCount={matches.length}
           onOpenHelp={() => setIsTieBreakerOpen(true)}
+          onOpenCreateModal={() => setIsCreateClubOpen(true)}
+          onOpenSelectModal={() => setIsSelectClubOpen(true)}
+          clubsCount={clubs.length}
         />
 
         {/* 1) 참가 선수 명단 */}
@@ -176,6 +277,26 @@ export default function App() {
           onClose={() => setSelectedMatch(null)}
           onSaveScore={handleSaveScore}
           ttsEnabled={ttsEnabled}
+        />
+      )}
+
+      {/* Create Club Modal Popup */}
+      {isCreateClubOpen && (
+        <CreateClubModal
+          onClose={() => setIsCreateClubOpen(false)}
+          onCreateClub={handleCreateClub}
+        />
+      )}
+
+      {/* Select & Manage Clubs Modal Popup */}
+      {isSelectClubOpen && (
+        <ClubSelectModal
+          clubs={clubs}
+          activeClubId={activeClubId}
+          onSelectClub={handleSelectClub}
+          onOpenCreateModal={() => setIsCreateClubOpen(true)}
+          onDeleteClub={handleDeleteClub}
+          onClose={() => setIsSelectClubOpen(false)}
         />
       )}
 
