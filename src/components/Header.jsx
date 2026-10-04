@@ -1,40 +1,42 @@
 import React, { useState } from 'react';
-import { Trophy, Share2, Download, Calendar, Users, HelpCircle } from 'lucide-react';
+import { Trophy, Download, Calendar, Users, HelpCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import jspdf from 'jspdf';
 import confetti from 'canvas-confetti';
 
 export default function Header({ leagueTitle, setLeagueTitle, playersCount, completedMatchesCount, totalMatchesCount, onOpenHelp }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  // Export Table as Image / PDF
-  const handleExportPDF = async () => {
+  // Export 1) Player List, 2) Matrix Grid, 3) Leaderboard as single PNG Image
+  const handleSavePNG = async () => {
     const element = document.getElementById('export-area');
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#0f172a' });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jspdf('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight);
-      pdf.save(`${leagueTitle || '탁구풀리그'}_결과.pdf`);
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#0f172a',
+        useCORS: true,
+        logging: false,
+      });
+
+      // Format Date: YYYY-MM-DD
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // Clean Title for Filename
+      const cleanTitle = (leagueTitle || '탁구리그').replace(/[\/\\:*?"<>|]/g, '_');
+      const filename = `${dateStr}_${cleanTitle}_결과.png`;
+
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
 
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
     } catch (e) {
-      alert('PDF 저장 중 오류가 발생했습니다.');
+      console.error(e);
+      alert('결과 이미지 저장 중 오류가 발생했습니다.');
     }
-  };
-
-  // Copy KakaoTalk Summary
-  const handleCopyKakaoText = () => {
-    const text = `🏓 [${leagueTitle}] 리그전 결과 🏓\n` +
-      `• 참가선수: ${playersCount}명\n` +
-      `• 진행상황: ${completedMatchesCount} / ${totalMatchesCount} 경기 완료\n` +
-      `• 웹 대진표 주소: ${window.location.href}`;
-    navigator.clipboard.writeText(text);
-    alert('카카오톡으로 공유할 텍스트가 복사되었습니다! 카톡에 붙여넣기(Ctrl+V) 하세요.');
   };
 
   return (
@@ -104,15 +106,16 @@ export default function Header({ leagueTitle, setLeagueTitle, playersCount, comp
           </div>
         </div>
 
-        {/* Share & Help Buttons */}
+        {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button className="btn-secondary" onClick={handleCopyKakaoText} title="카톡으로 결과 전달">
-            <Share2 size={18} color="var(--accent-success)" />
-            <span>카톡 공유</span>
-          </button>
-          <button className="btn-secondary" onClick={handleExportPDF} title="PDF 파일 다운로드">
-            <Download size={18} color="var(--accent-primary)" />
-            <span>PDF 저장</span>
+          <button
+            className="btn-secondary"
+            onClick={handleSavePNG}
+            title="선수명단 + 종이 대진표 + 실시간 순위표를 PNG 이미지로 저장"
+            style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', borderColor: 'var(--accent-success)' }}
+          >
+            <Download size={18} />
+            <span>결과저장</span>
           </button>
           <button
             className="btn-secondary"

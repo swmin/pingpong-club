@@ -11,7 +11,7 @@ import RankingTable from './components/RankingTable';
 import ScoreModal from './components/ScoreModal';
 import TieBreakerExplainer from './components/TieBreakerExplainer';
 
-import { Grid, Calendar, Trophy } from 'lucide-react';
+import { Grid, Calendar } from 'lucide-react';
 
 export default function App() {
   // App States
@@ -22,9 +22,8 @@ export default function App() {
   const [selectedMatch, setSelectedMatch] = useState(null);
 
   // Senior Accessibility States
-  const [fontScale, setFontScale] = useState(1.2); // Default to Large for seniors
+  const [fontScale, setFontScale] = useState(1.0); // Default font scale: 보통 (1.0)
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [theme, setTheme] = useState('dark');
   const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
 
   // Initialize dataset from localstorage or paper sample
@@ -60,26 +59,16 @@ export default function App() {
     }
   }, [leagueTitle, players, matches]);
 
-  // Apply font scale & theme to root DOM
+  // Apply font scale to root DOM
   useEffect(() => {
     document.documentElement.style.setProperty('--font-scale', fontScale);
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [fontScale, theme]);
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }, [fontScale]);
 
   // Generate fresh empty schedule when players change
   const handleGenerateNewSchedule = (newPlayers) => {
     const newMatches = generateSchedule(newPlayers);
     setMatches(newMatches);
-  };
-
-  // Load paper sample preset
-  const handleLoadPaperSample = () => {
-    if (confirm('종이 대진표(1777725049075.jpg)의 샘플 데이터로 복원하시겠습니까?')) {
-      setLeagueTitle('정정회 (정정숙 회장, 정용호 총무)');
-      setPlayers(PAPER_SAMPLE_PLAYERS);
-      const sampleMatches = generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS);
-      setMatches(sampleMatches);
-    }
   };
 
   // Reset current league to empty pending matches
@@ -114,13 +103,10 @@ export default function App() {
         setFontScale={setFontScale}
         ttsEnabled={ttsEnabled}
         setTtsEnabled={setTtsEnabled}
-        theme={theme}
-        setTheme={setTheme}
-        onLoadPaperSample={handleLoadPaperSample}
         onResetLeague={handleResetLeague}
       />
 
-      {/* Main Header & Export */}
+      {/* Main Header */}
       <Header
         leagueTitle={leagueTitle}
         setLeagueTitle={setLeagueTitle}
@@ -130,54 +116,57 @@ export default function App() {
         onOpenHelp={() => setIsTieBreakerOpen(true)}
       />
 
-      {/* Player List Manager */}
-      <PlayerManager
-        players={players}
-        setPlayers={setPlayers}
-        onGenerateNewSchedule={handleGenerateNewSchedule}
-      />
+      {/* Export Printable Target Area: 1) 참가선수명단, 2) 종이 대진표 (격자표), 3) 실시간 대회 순위표 */}
+      <div id="export-area" style={{ padding: '8px', borderRadius: '12px', backgroundColor: 'var(--bg-main)' }}>
+        {/* 1) 참가 선수 명단 */}
+        <PlayerManager
+          players={players}
+          setPlayers={setPlayers}
+          onGenerateNewSchedule={handleGenerateNewSchedule}
+        />
 
-      {/* View Tabs */}
-      <div className="view-tabs">
-        <button
-          className={`tab-btn ${activeTab === 'grid' ? 'active' : ''}`}
-          onClick={() => setActiveTab('grid')}
-        >
-          <Grid size={22} />
-          <span>종이 대진표 뷰 (격자표)</span>
-        </button>
+        {/* View Tabs */}
+        <div className="view-tabs">
+          <button
+            className={`tab-btn ${activeTab === 'grid' ? 'active' : ''}`}
+            onClick={() => setActiveTab('grid')}
+          >
+            <Grid size={22} />
+            <span>종이 대진표 뷰 (격자표)</span>
+          </button>
 
-        <button
-          className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
-        >
-          <Calendar size={22} />
-          <span>순서별 경기 진행 뷰</span>
-        </button>
+          <button
+            className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
+            onClick={() => setActiveTab('schedule')}
+          >
+            <Calendar size={22} />
+            <span>순서별 경기 진행 뷰</span>
+          </button>
+        </div>
+
+        {/* 2) 종이 대진표 (격자표) */}
+        {activeTab === 'grid' ? (
+          <MatrixGridView
+            players={players}
+            matches={matches}
+            rankingsMap={rankingsMap}
+            onSelectMatchCell={setSelectedMatch}
+          />
+        ) : (
+          <ScheduleView
+            players={players}
+            matches={matches}
+            onSelectMatchCell={setSelectedMatch}
+          />
+        )}
+
+        {/* 3) 실시간 대회 순위표 */}
+        <RankingTable
+          rankings={rankings}
+          tieBreakerExplanations={tieBreakerExplanations}
+          onOpenTieBreakerModal={() => setIsTieBreakerOpen(true)}
+        />
       </div>
-
-      {/* Main Content Area */}
-      {activeTab === 'grid' ? (
-        <MatrixGridView
-          players={players}
-          matches={matches}
-          rankingsMap={rankingsMap}
-          onSelectMatchCell={setSelectedMatch}
-        />
-      ) : (
-        <ScheduleView
-          players={players}
-          matches={matches}
-          onSelectMatchCell={setSelectedMatch}
-        />
-      )}
-
-      {/* Live Standings Leaderboard */}
-      <RankingTable
-        rankings={rankings}
-        tieBreakerExplanations={tieBreakerExplanations}
-        onOpenTieBreakerModal={() => setIsTieBreakerOpen(true)}
-      />
 
       {/* Score Input Modal */}
       {selectedMatch && (
