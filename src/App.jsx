@@ -106,18 +106,18 @@ export default function App() {
         onResetLeague={handleResetLeague}
       />
 
-      {/* Main Header */}
-      <Header
-        leagueTitle={leagueTitle}
-        setLeagueTitle={setLeagueTitle}
-        playersCount={players.length}
-        completedMatchesCount={completedCount}
-        totalMatchesCount={matches.length}
-        onOpenHelp={() => setIsTieBreakerOpen(true)}
-      />
+      {/* Export Target Container (Captured when clicking 결과저장) */}
+      <div id="export-area" style={{ padding: '16px', borderRadius: '16px', backgroundColor: 'var(--bg-main)' }}>
+        {/* 맨 위: 모임 이름 & 모임 날짜 헤더 */}
+        <Header
+          leagueTitle={leagueTitle}
+          setLeagueTitle={setLeagueTitle}
+          playersCount={players.length}
+          completedMatchesCount={completedCount}
+          totalMatchesCount={matches.length}
+          onOpenHelp={() => setIsTieBreakerOpen(true)}
+        />
 
-      {/* Export Printable Target Area: 1) 참가선수명단, 2) 종이 대진표 (격자표), 3) 실시간 대회 순위표 */}
-      <div id="export-area" style={{ padding: '8px', borderRadius: '12px', backgroundColor: 'var(--bg-main)' }}>
         {/* 1) 참가 선수 명단 */}
         <PlayerManager
           players={players}
@@ -126,7 +126,7 @@ export default function App() {
         />
 
         {/* View Tabs */}
-        <div className="view-tabs">
+        <div className="view-tabs" data-html2canvas-ignore="true">
           <button
             className={`tab-btn ${activeTab === 'grid' ? 'active' : ''}`}
             onClick={() => setActiveTab('grid')}

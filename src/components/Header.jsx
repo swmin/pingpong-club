@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 export default function Header({ leagueTitle, setLeagueTitle, playersCount, completedMatchesCount, totalMatchesCount, onOpenHelp }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  // Export 1) Player List, 2) Matrix Grid, 3) Leaderboard as single PNG Image
+  // Export Header (Title, Date), Player List, Matrix Grid, Leaderboard as PNG Image
   const handleSavePNG = async () => {
     const element = document.getElementById('export-area');
     if (!element) return;
@@ -42,12 +42,12 @@ export default function Header({ leagueTitle, setLeagueTitle, playersCount, comp
   return (
     <header style={{ marginBottom: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-        {/* Title Area */}
+        {/* Title & Date Area */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
+            width: '52px',
+            height: '52px',
+            borderRadius: '14px',
             backgroundColor: 'var(--accent-primary)',
             color: '#0f172a',
             display: 'flex',
@@ -55,7 +55,7 @@ export default function Header({ leagueTitle, setLeagueTitle, playersCount, comp
             justifyContent: 'center',
             boxShadow: '0 4px 14px rgba(56, 189, 248, 0.4)'
           }}>
-            <Trophy size={28} />
+            <Trophy size={30} />
           </div>
 
           <div>
@@ -88,41 +88,42 @@ export default function Header({ leagueTitle, setLeagueTitle, playersCount, comp
                   alignItems: 'center',
                   gap: '8px'
                 }}
-                title="클릭하여 대회 제목 수정"
+                title="클릭하여 모임 이름 수정"
               >
                 {leagueTitle}
-                <span style={{ fontSize: '14px', color: 'var(--accent-primary)', fontWeight: '600' }}>[수정]</span>
+                <span data-html2canvas-ignore="true" style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '600' }}>[수정]</span>
               </h1>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Calendar size={14} /> {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+            {/* Date and Participant info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700', color: 'var(--text-main)' }}>
+                <Calendar size={16} color="var(--accent-primary)" /> {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
               </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Users size={14} /> 참가자 {playersCount}명
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Users size={16} /> 참가자 {playersCount}명 ({completedMatchesCount}/${totalMatchesCount} 경기 완료)
               </span>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Action Buttons (ignored during html2canvas capture) */}
+        <div data-html2canvas-ignore="true" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             className="btn-secondary"
             onClick={handleSavePNG}
-            title="선수명단 + 종이 대진표 + 실시간 순위표를 PNG 이미지로 저장"
-            style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', borderColor: 'var(--accent-success)' }}
+            title="모임이름 + 날짜 + 선수명단 + 종이대진표 + 순위표를 PNG 이미지로 저장"
+            style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success)', borderColor: 'var(--accent-success)', padding: '10px 16px', fontWeight: '800' }}
           >
-            <Download size={18} />
+            <Download size={20} />
             <span>결과저장</span>
           </button>
           <button
             className="btn-secondary"
             onClick={onOpenHelp}
-            style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
+            style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', borderColor: 'var(--accent-purple)', padding: '10px 16px' }}
           >
-            <HelpCircle size={18} />
+            <HelpCircle size={20} />
             <span>동률 규칙 설명</span>
           </button>
         </div>
