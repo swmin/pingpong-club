@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2, Edit3 } from 'lucide-react';
+import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2, Clock, CalendarPlus } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import confetti from 'canvas-confetti';
 
@@ -14,7 +14,10 @@ export default function Header({
   onOpenHelp,
   onOpenCreateModal,
   onOpenSelectModal,
+  onOpenCreateSessionModal,
+  onOpenSelectSessionModal,
   clubsCount,
+  sessionsCount,
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDate, setIsEditingDate] = useState(false);
@@ -23,7 +26,7 @@ export default function Header({
   const getFormattedKoreanDate = (dateString) => {
     let d = new Date(dateString);
     if (isNaN(d.getTime())) {
-      d = new Date(); // Fallback to current date if invalid
+      d = new Date();
     }
     const year = d.getFullYear();
     const month = d.getMonth() + 1;
@@ -166,7 +169,7 @@ export default function Header({
               </div>
             </div>
 
-            {/* Date and Participant info */}
+            {/* Date, Session History, and Participant info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '6px', flexWrap: 'wrap' }}>
               {/* Meeting Date Display & Manual Input */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -183,7 +186,6 @@ export default function Header({
                         if (e.key === 'Enter') setIsEditingDate(false);
                       }}
                       onBlur={() => {
-                        // Small timeout to allow button click if tapped
                         setTimeout(() => setIsEditingDate(false), 150);
                       }}
                       autoFocus
@@ -230,6 +232,40 @@ export default function Header({
                     <span data-html2canvas-ignore="true" style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '600' }}>[날짜변경]</span>
                   </span>
                 )}
+              </div>
+
+              {/* Session History & Create Session Buttons */}
+              <div data-html2canvas-ignore="true" style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  className="btn-secondary"
+                  onClick={onOpenCreateSessionModal}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    color: 'var(--accent-success)',
+                    borderColor: 'var(--accent-success)',
+                  }}
+                  title="새로운 모임(날짜) 페이지 생성"
+                >
+                  <CalendarPlus size={14} />
+                  <span>+ 새 모임 생성</span>
+                </button>
+
+                <button
+                  className="btn-secondary"
+                  onClick={onOpenSelectSessionModal}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                  }}
+                  title="과거 모임 히스토리 목록 보기 및 날짜 전환"
+                >
+                  <Clock size={14} />
+                  <span>모임 히스토리 ({sessionsCount}회차) ▼</span>
+                </button>
               </div>
 
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

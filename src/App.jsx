@@ -12,6 +12,8 @@ import ScoreModal from './components/ScoreModal';
 import TieBreakerExplainer from './components/TieBreakerExplainer';
 import CreateClubModal from './components/CreateClubModal';
 import ClubSelectModal from './components/ClubSelectModal';
+import CreateSessionModal from './components/CreateSessionModal';
+import SessionSelectModal from './components/SessionSelectModal';
 
 import { Grid, Calendar } from 'lucide-react';
 
@@ -23,6 +25,8 @@ export default function App() {
   // Modals Toggle
   const [isCreateClubOpen, setIsCreateClubOpen] = useState(false);
   const [isSelectClubOpen, setIsSelectClubOpen] = useState(false);
+  const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false);
+  const [isSelectSessionOpen, setIsSelectSessionOpen] = useState(false);
   const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
 
   // Active View & Score Modal
@@ -33,7 +37,16 @@ export default function App() {
   const [fontScale, setFontScale] = useState(1.0); // Default font scale: 보통 (1.0)
   const [ttsEnabled, setTtsEnabled] = useState(true);
 
-  // Initialize dataset & handle migration to multi-club
+  // Helper to format today's date YYYY-MM-DD
+  const getTodayISO = () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Initialize dataset & handle migration to multi-club & multi-session
   useEffect(() => {
     const savedClubs = localStorage.getItem('tt_clubs_data_v2');
     const savedActiveId = localStorage.getItem('tt_active_club_id');
@@ -42,8 +55,32 @@ export default function App() {
       try {
         const parsedClubs = JSON.parse(savedClubs);
         if (Array.isArray(parsedClubs) && parsedClubs.length > 0) {
-          setClubs(parsedClubs);
-          setActiveClubId(savedActiveId && parsedClubs.some(c => c.id === savedActiveId) ? savedActiveId : parsedClubs[0].id);
+          // Ensure sessions exist in each club
+          const sanitizedClubs = parsedClubs.map(club => {
+            const masterRoster = club.masterRoster || PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' }));
+            let sessions = club.sessions;
+
+            if (!Array.isArray(sessions) || sessions.length === 0) {
+              const defaultSession = {
+                id: `s_${Date.now()}`,
+                date: club.meetingDate || getTodayISO(),
+                players: club.players || PAPER_SAMPLE_PLAYERS,
+                matches: club.matches || generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+                createdAt: Date.now(),
+              };
+              sessions = [defaultSession];
+            }
+
+            return {
+              ...club,
+              masterRoster,
+              sessions,
+              activeSessionId: club.activeSessionId && sessions.some(s => s.id === club.activeSessionId) ? club.activeSessionId : sessions[0].id,
+            };
+          });
+
+          setClubs(sanitizedClubs);
+          setActiveClubId(savedActiveId && sanitizedClubs.some(c => c.id === savedActiveId) ? savedActiveId : sanitizedClubs[0].id);
           return;
         }
       } catch (e) {
@@ -51,29 +88,21 @@ export default function App() {
       }
     }
 
-    // Migration from v1 single-club data or initialize default club
-    let defaultTitle = '정정회 (정정숙 회장, 정용호 총무)';
-    let defaultPlayers = PAPER_SAMPLE_PLAYERS;
-    let defaultMatches = generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS);
-
-    const legacyV1 = localStorage.getItem('tt_league_data_v1');
-    if (legacyV1) {
-      try {
-        const parsedV1 = JSON.parse(legacyV1);
-        if (parsedV1.leagueTitle) defaultTitle = parsedV1.leagueTitle;
-        if (parsedV1.players) defaultPlayers = parsedV1.players;
-        if (parsedV1.matches) defaultMatches = parsedV1.matches;
-      } catch (e) {
-        console.error('Failed to parse v1 legacy data', e);
-      }
-    }
+    // Default Club & Initial Session
+    const initialSession = {
+      id: 's_default',
+      date: getTodayISO(),
+      players: PAPER_SAMPLE_PLAYERS,
+      matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+      createdAt: Date.now(),
+    };
 
     const initialClub = {
       id: 'c_default',
-      name: defaultTitle,
+      name: '정정회 (정정숙 회장, 정용호 총무)',
       masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
-      players: defaultPlayers,
-      matches: defaultMatches,
+      activeSessionId: initialSession.id,
+      sessions: [initialSession],
       createdAt: Date.now(),
     };
 
@@ -102,12 +131,20 @@ export default function App() {
     id: 'c_fallback',
     name: '동호회',
     masterRoster: [],
+    sessions: [],
+  };
+
+  const sessions = activeClub.sessions || [];
+  const activeSession = sessions.find(s => s.id === activeClub.activeSessionId) || sessions[0] || {
+    id: 's_fallback',
+    date: getTodayISO(),
     players: [],
     matches: [],
   };
 
-  const players = activeClub.players || [];
-  const matches = activeClub.matches || [];
+  const players = activeSession.players || [];
+  const matches = activeSession.matches || [];
+  const meetingDate = activeSession.date || getTodayISO();
   const leagueTitle = activeClub.name || '동호회';
 
   const masterRoster = activeClub.masterRoster || PAPER_SAMPLE_PLAYERS.map(p => ({
@@ -116,7 +153,7 @@ export default function App() {
     currentDivision: p.currentDivision || p.division || '7부',
   }));
 
-  // Helper to update active club properties
+  // Helper to update active club
   const updateActiveClub = (updater) => {
     setClubs(prevClubs =>
       prevClubs.map(c => {
@@ -128,28 +165,100 @@ export default function App() {
     );
   };
 
+  // Helper to update active session inside active club
+  const updateActiveSession = (sessionUpdater) => {
+    updateActiveClub(club => {
+      const updatedSessions = (club.sessions || []).map(s => {
+        if (s.id === activeSession.id) {
+          return typeof sessionUpdater === 'function' ? sessionUpdater(s) : { ...s, ...sessionUpdater };
+        }
+        return s;
+      });
+      return { ...club, sessions: updatedSessions };
+    });
+  };
+
   // 1) Create New Club
   const handleCreateClub = (name) => {
-    const newId = `c_${Date.now()}`;
-    const newClub = {
-      id: newId,
-      name,
-      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
+    const newClubId = `c_${Date.now()}`;
+    const firstSession = {
+      id: `s_${Date.now()}`,
+      date: getTodayISO(),
       players: PAPER_SAMPLE_PLAYERS,
       matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
       createdAt: Date.now(),
     };
 
+    const newClub = {
+      id: newClubId,
+      name,
+      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
+      activeSessionId: firstSession.id,
+      sessions: [firstSession],
+      createdAt: Date.now(),
+    };
+
     setClubs(prev => [...prev, newClub]);
-    setActiveClubId(newId);
+    setActiveClubId(newClubId);
   };
 
-  // 2) Select Club
+  // 2) Create New Meeting Session (Date Page)
+  const handleCreateSession = (newDate) => {
+    const newSessionId = `s_${Date.now()}`;
+    const initialParticipants = masterRoster.map(p => ({
+      id: p.id,
+      name: p.name,
+      division: p.currentDivision || '7부',
+      avatarColor: p.avatarColor || '#3b82f6',
+      category: p.category || 'club',
+    }));
+
+    const newSession = {
+      id: newSessionId,
+      date: newDate,
+      players: initialParticipants,
+      matches: generateSchedule(initialParticipants),
+      createdAt: Date.now(),
+    };
+
+    updateActiveClub(club => ({
+      ...club,
+      sessions: [newSession, ...(club.sessions || [])],
+      activeSessionId: newSessionId,
+    }));
+  };
+
+  // Select Meeting Session (Date Page)
+  const handleSelectSession = (sessionId) => {
+    updateActiveClub({ activeSessionId: sessionId });
+  };
+
+  // Delete Meeting Session
+  const handleDeleteSession = (sessionId) => {
+    if (sessions.length <= 1) {
+      alert('동호회에는 최소 1개의 모임 날짜 페이지가 존재해야 합니다.');
+      return;
+    }
+    const updatedSessions = sessions.filter(s => s.id !== sessionId);
+    const newActiveId = activeSession.id === sessionId ? updatedSessions[0].id : activeSession.id;
+
+    updateActiveClub({
+      sessions: updatedSessions,
+      activeSessionId: newActiveId,
+    });
+  };
+
+  // Update date of active session
+  const setMeetingDate = (newDate) => {
+    updateActiveSession({ date: newDate });
+  };
+
+  // Select Club
   const handleSelectClub = (id) => {
     setActiveClubId(id);
   };
 
-  // 3) Delete Club
+  // Delete Club
   const handleDeleteClub = (id) => {
     if (clubs.length <= 1) {
       alert('최소 1개의 동호회가 존재해야 합니다.');
@@ -167,7 +276,7 @@ export default function App() {
     updateActiveClub({ masterRoster: newRoster });
   };
 
-  // Toggle Participant Check-in for current meeting
+  // Toggle Participant Check-in for CURRENT ACTIVE SESSION ONLY
   const handleToggleParticipant = (player) => {
     const isCurrentlyChecked = players.some(p => p.id === player.id);
     let updatedParticipants;
@@ -184,10 +293,10 @@ export default function App() {
       updatedParticipants = [...players, newParticipant];
     }
     const newMatches = generateSchedule(updatedParticipants);
-    updateActiveClub({ players: updatedParticipants, matches: newMatches });
+    updateActiveSession({ players: updatedParticipants, matches: newMatches });
   };
 
-  // Update division for TODAY's meeting date only (Preserves past meeting history!)
+  // Update division for CURRENT ACTIVE SESSION ONLY (Historic Preservation!)
   const handleUpdateParticipantDivision = (playerId, newDivision) => {
     const updatedParticipants = players.map(p => {
       if (p.id === playerId) {
@@ -195,7 +304,7 @@ export default function App() {
       }
       return p;
     });
-    updateActiveClub({ players: updatedParticipants });
+    updateActiveSession({ players: updatedParticipants });
   };
 
   // Rename Club Title
@@ -203,33 +312,28 @@ export default function App() {
     updateActiveClub({ name: newName });
   };
 
-  // Set players list for active club
-  const setPlayers = (newPlayers) => {
-    updateActiveClub({ players: newPlayers });
-  };
-
-  // Generate fresh schedule for active club
+  // Generate fresh schedule for active session
   const handleGenerateNewSchedule = (newPlayers) => {
     const newMatches = generateSchedule(newPlayers);
-    updateActiveClub({ players: newPlayers, matches: newMatches });
+    updateActiveSession({ players: newPlayers, matches: newMatches });
   };
 
-  // Reset active club schedule
+  // Reset active session schedule
   const handleResetLeague = () => {
-    if (confirm(`'${leagueTitle}' 동호회의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
+    if (confirm(`'${meetingDate}' 모임의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
       const freshMatches = generateSchedule(players);
-      updateActiveClub({ matches: freshMatches });
+      updateActiveSession({ matches: freshMatches });
     }
   };
 
   // Save match score from ScoreModal
   const handleSaveScore = (updatedMatch) => {
     const nextMatches = matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);
-    updateActiveClub({ matches: nextMatches });
+    updateActiveSession({ matches: nextMatches });
     setSelectedMatch(null);
   };
 
-  // Calculate live rankings & tie-breakers for active club
+  // Calculate live rankings & tie-breakers for active session
   const { rankings, tieBreakerExplanations } = calculateRankings(players, matches);
 
   // Map of ranking by player id for quick matrix header display
@@ -237,9 +341,6 @@ export default function App() {
   rankings.forEach(r => { rankingsMap[r.id] = r; });
 
   const completedCount = matches.filter(m => m.status === 'completed' || m.status === 'forfeit').length;
-
-  const meetingDate = activeClub.meetingDate || '';
-  const setMeetingDate = (newDate) => updateActiveClub({ meetingDate: newDate });
 
   return (
     <div className="app-container">
@@ -266,7 +367,10 @@ export default function App() {
           onOpenHelp={() => setIsTieBreakerOpen(true)}
           onOpenCreateModal={() => setIsCreateClubOpen(true)}
           onOpenSelectModal={() => setIsSelectClubOpen(true)}
+          onOpenCreateSessionModal={() => setIsCreateSessionOpen(true)}
+          onOpenSelectSessionModal={() => setIsSelectSessionOpen(true)}
           clubsCount={clubs.length}
+          sessionsCount={sessions.length}
         />
 
         {/* 1) 3개 카테고리 (동호회/Guest/선수관리) 기반 참가 선수 명단 */}
@@ -310,6 +414,7 @@ export default function App() {
           <ScheduleView
             players={players}
             matches={matches}
+            rankingsMap={rankingsMap}
             onSelectMatchCell={setSelectedMatch}
           />
         )}
@@ -350,6 +455,28 @@ export default function App() {
           onOpenCreateModal={() => setIsCreateClubOpen(true)}
           onDeleteClub={handleDeleteClub}
           onClose={() => setIsSelectClubOpen(false)}
+        />
+      )}
+
+      {/* Create Meeting Session (Date Page) Modal Popup */}
+      {isCreateSessionOpen && (
+        <CreateSessionModal
+          onClose={() => setIsCreateSessionOpen(false)}
+          onCreateSession={handleCreateSession}
+          clubName={leagueTitle}
+        />
+      )}
+
+      {/* Select & Manage Sessions (Date Pages) Modal Popup */}
+      {isSelectSessionOpen && (
+        <SessionSelectModal
+          sessions={sessions}
+          activeSessionId={activeSession.id}
+          onSelectSession={handleSelectSession}
+          onOpenCreateSessionModal={() => setIsCreateSessionOpen(true)}
+          onDeleteSession={handleDeleteSession}
+          onClose={() => setIsSelectSessionOpen(false)}
+          clubName={leagueTitle}
         />
       )}
 
