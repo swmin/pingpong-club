@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2 } from 'lucide-react';
+import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2, Edit3 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import confetti from 'canvas-confetti';
 
 export default function Header({
   leagueTitle,
   setLeagueTitle,
+  meetingDate,
+  setMeetingDate,
   playersCount,
   completedMatchesCount,
   totalMatchesCount,
@@ -15,6 +17,33 @@ export default function Header({
   clubsCount,
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+
+  // Helper to format Korean date without duplicate "일" bug: e.g. "2026년 10월 4일 (일)"
+  const getFormattedKoreanDate = (dateString) => {
+    let d = new Date(dateString);
+    if (isNaN(d.getTime())) {
+      d = new Date(); // Fallback to current date if invalid
+    }
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdayStr = weekdays[d.getDay()];
+
+    return `${year}년 ${month}월 ${day}일 (${weekdayStr})`;
+  };
+
+  // Helper to get YYYY-MM-DD
+  const getTodayISO = () => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const currentDateValue = meetingDate || getTodayISO();
 
   // Export Header (Title, Date), Player List, Matrix Grid, Leaderboard as PNG Image
   const handleSavePNG = async () => {
@@ -29,13 +58,9 @@ export default function Header({
         logging: false,
       });
 
-      // Format Date: YYYY-MM-DD
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      // Clean Title for Filename
+      // Filename: <동호회 만날 날짜>_<동호회이름>_결과.png
       const cleanTitle = (leagueTitle || '탁구리그').replace(/[\/\\:*?"<>|]/g, '_');
-      const filename = `${dateStr}_${cleanTitle}_결과.png`;
+      const filename = `${currentDateValue}_${cleanTitle}_결과.png`;
 
       const link = document.createElement('a');
       link.download = filename;
@@ -142,10 +167,45 @@ export default function Header({
             </div>
 
             {/* Date and Participant info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '6px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700', color: 'var(--text-main)' }}>
-                <Calendar size={16} color="var(--accent-primary)" /> {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: 'var(--text-muted)', fontSize: '15px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {/* Meeting Date Display & Manual Input */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={16} color="var(--accent-primary)" />
+                {isEditingDate ? (
+                  <input
+                    type="date"
+                    value={currentDateValue}
+                    onChange={e => setMeetingDate(e.target.value)}
+                    onBlur={() => setIsEditingDate(false)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--accent-primary)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                    }}
+                  />
+                ) : (
+                  <span
+                    onClick={() => setIsEditingDate(true)}
+                    style={{
+                      fontWeight: '700',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="클릭하여 날짜 수동 수정 (기본값: 오늘 날짜)"
+                  >
+                    {getFormattedKoreanDate(currentDateValue)}
+                    <span data-html2canvas-ignore="true" style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: '600' }}>[날짜변경]</span>
+                  </span>
+                )}
+              </div>
+
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Users size={16} /> 참가자 {playersCount}명 ({completedMatchesCount}/${totalMatchesCount} 경기 완료)
               </span>

@@ -193,6 +193,9 @@ export default function App() {
 
   const completedCount = matches.filter(m => m.status === 'completed' || m.status === 'forfeit').length;
 
+  const meetingDate = activeClub.meetingDate || '';
+  const setMeetingDate = (newDate) => updateActiveClub({ meetingDate: newDate });
+
   return (
     <div className="app-container">
       {/* Top Senior Accessibility Control Bar */}
@@ -210,6 +213,8 @@ export default function App() {
         <Header
           leagueTitle={leagueTitle}
           setLeagueTitle={setLeagueTitle}
+          meetingDate={meetingDate}
+          setMeetingDate={setMeetingDate}
           playersCount={players.length}
           completedMatchesCount={completedCount}
           totalMatchesCount={matches.length}
