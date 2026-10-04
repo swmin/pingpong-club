@@ -431,7 +431,41 @@ export default function PlayerManager({
           {activeRosterTab === 'manage' && (
             <div>
               <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                ⚙️ 전체 선수 DB 관리 (이름 수정, 기본 부수 변경, 동호회/게스트 구분 변경, 삭제)
+                ⚙️ 전체 선수 DB 관리 (신규 선수 등록, 이름 수정, 기본 부수 변경, 동호회/게스트 구분 변경, 삭제)
+              </div>
+
+              {/* Inline Add New Player Form for TAB 3 */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', backgroundColor: 'var(--bg-main)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                <span style={{ fontWeight: '800', alignSelf: 'center', fontSize: '14px' }}>➕ 신규 선수 추가:</span>
+                <input
+                  type="text"
+                  placeholder="선수 이름"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                />
+                <select
+                  value={editCategory}
+                  onChange={e => setEditCategory(e.target.value)}
+                  style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700' }}
+                >
+                  <option value="club">동호회 선수</option>
+                  <option value="guest">Guest 선수</option>
+                </select>
+                <select
+                  value={newDivision}
+                  onChange={e => setNewDivision(e.target.value)}
+                  style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700' }}
+                >
+                  {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <button
+                  className="btn-primary"
+                  onClick={() => handleAddMasterPlayer(editCategory || 'club')}
+                  style={{ width: 'auto', padding: '8px 16px', fontSize: '14px', backgroundColor: 'var(--accent-warning)', color: '#0f172a' }}
+                >
+                  <UserPlus size={16} /> 선수 추가
+                </button>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
