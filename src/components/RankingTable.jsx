@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Trophy, AlertCircle, BarChart3 } from 'lucide-react';
+import { Trophy, AlertCircle, BarChart3, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import confetti from 'canvas-confetti';
 
 export default function RankingTable({
   rankings = [],
@@ -9,8 +11,77 @@ export default function RankingTable({
   onOpenTieBreakerModal,
   clubName = '동호회',
   sessionsCount = 1,
+  lastSessionDate = '',
 }) {
   const [activeTab, setActiveTab] = useState('session'); // 'session' | 'cumulative'
+
+  // Helper to format Korean date without duplicate "일" bug: e.g. "2026년 10월 4일 (일)"
+  const getFormattedKoreanDate = (dateString) => {
+    if (!dateString) return '';
+    let d = new Date(dateString);
+    if (isNaN(d.getTime())) {
+      d = new Date();
+    }
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekdayStr = weekdays[d.getDay()];
+
+    return `${year}년 ${month}월 ${day}일 (${weekdayStr})`;
+  };
+
+  const lastSessionDateFormatted = getFormattedKoreanDate(lastSessionDate);
+
+  // Save ONLY the Cumulative Standings Card as PNG Image
+  const handleSaveCumulativePNG = async () => {
+    const element = document.getElementById('cumulative-export-area');
+    if (!element) return;
+
+    try {
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const captureScale = isMobile ? 1.5 : 2;
+
+      const canvas = await html2canvas(element, {
+        scale: captureScale,
+        backgroundColor: '#1e293b',
+        useCORS: true,
+        logging: false,
+      });
+
+      const cleanTitle = (clubName || '동호회').replace(/[\/\\:*?"<>|]/g, '_');
+      const filename = `${lastSessionDate || '통산'}_${cleanTitle}_통산누적순위.png`;
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('이미지 생성에 실패했습니다.');
+          return;
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (isMobile) {
+          setTimeout(() => {
+            const win = window.open(blobUrl, '_blank');
+            if (!win) {
+              alert('🖼️ 갤러리에 저장하려면 생성된 이미지를 새 탭에서 열어 저장해 주세요.');
+            }
+          }, 300);
+        }
+
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      }, 'image/png');
+    } catch (e) {
+      console.error(e);
+      alert('통산 누적 순위 이미지 저장 중 오류가 발생했습니다.');
+    }
+  };
 
   const renderTableRows = (list) => {
     if (!list || list.length === 0) {
@@ -133,7 +204,7 @@ export default function RankingTable({
           }}
         >
           <BarChart3 size={18} />
-          <span>📊 동호회 통산 누적 순위표 ({sessionsCount}개 모임 합산)</span>
+          <span>📊 동호회 통산 누적 순위표 ({sessionsCount}개 모임 합산{lastSessionDateFormatted ? `, ${lastSessionDateFormatted}` : ''})</span>
         </button>
       </div>
 
@@ -196,24 +267,46 @@ export default function RankingTable({
 
       {/* Tab Content 2: All-time Cumulative Career Standings */}
       {activeTab === 'cumulative' && (
-        <div style={{
-          backgroundColor: 'var(--bg-card)',
-          border: '1px solid rgba(245, 158, 11, 0.4)',
-          borderRadius: 'var(--radius-md)',
-          padding: '20px',
-          boxShadow: 'var(--shadow-main)'
-        }}>
+        <div
+          id="cumulative-export-area"
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            padding: '20px',
+            boxShadow: 'var(--shadow-main)'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={24} color="#f59e0b" />
               <h3 style={{ fontSize: 'var(--font-xl)', fontWeight: '900', color: '#f59e0b' }}>
-                📊 [{clubName}] 동호회 통산 누적 순위표 ({sessionsCount}개 모임 합산)
+                📊 [{clubName}] 동호회 통산 누적 순위표 ({sessionsCount}개 모임 합산{lastSessionDateFormatted ? `, ${lastSessionDateFormatted}` : ''})
               </h3>
             </div>
+
+            {/* Dedicated PNG Export Button for Cumulative Table */}
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={handleSaveCumulativePNG}
+              data-html2canvas-ignore="true"
+              style={{
+                backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                color: '#f59e0b',
+                borderColor: '#f59e0b',
+                padding: '8px 14px',
+                fontWeight: '800'
+              }}
+              title="동호회 통산 누적 순위표만 PNG 이미지로 저장"
+            >
+              <Download size={18} />
+              <span>결과저장</span>
+            </button>
           </div>
 
           <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            📌 <strong>[{clubName}]</strong> 동호회의 전체 {sessionsCount}개 모임 기록을 합산한 <strong>통산 누적 순위표</strong>입니다. (다른 동호회와 합산되지 않음)
+            📌 <strong>[{clubName}]</strong> 동호회의 전체 {sessionsCount}개 모임 기록을 합산한 <strong>통산 누적 순위표</strong>입니다. (마지막 모임: {lastSessionDateFormatted || '최신'})
           </div>
 
           <div style={{ overflowX: 'auto' }}>

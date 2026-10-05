@@ -550,6 +550,7 @@ export default function App() {
           cumulativeTieBreakerExplanations={cumulativeResult.tieBreakerExplanations}
           clubName={leagueTitle}
           sessionsCount={sessions.length}
+          lastSessionDate={sessions[0]?.date || meetingDate}
           onOpenTieBreakerModal={() => setIsTieBreakerOpen(true)}
         />
       </div>
