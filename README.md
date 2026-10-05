@@ -1,16 +1,99 @@
-# React + Vite
+# 🏓 정정회 탁구 풀리그 대진표 & 스코어보드 (Pingpong Club Scoreboard)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+어르신들도 보기 쉬운 시니어 친화적 디자인과 다중 동호회 관리, 모임 날짜별 히스토리 기능, 통산 누적 순위표를 제공하는 **탁구 풀리그(Round-Robin) 대진표 & 스코어보드 웹 애플리케이션**입니다.
 
-Currently, two official plugins are available:
+인터넷 연결이 없는 환경에서도 단 하나의 HTML 파일(`pingpong-club-scoreboard.html`)만 있으면 스마트폰, 갤럭시 탭, PC 브라우저에서 100% 오프라인으로 실행할 수 있습니다.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 1. 📥 코드 다운로드 및 빌드 방법 (Download & Build Guide)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1) Git 저장소 복제 (Clone)
+```bash
+# 최신 버전 코드 내려받기
+git clone https://github.com/swmin/pingpong-club.git
+cd pingpong-club
 
-## Expanding the Oxlint configuration
+# 특정 버전 태그(예: ver.0.5) 코드로 받아 오실 경우
+git clone -b ver.0.5 https://github.com/swmin/pingpong-club.git
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### 2) 의존성 패키지 설치
+```bash
+npm install
+```
+
+### 3) 로컬 개발 서버 실행
+```bash
+npm run dev
+```
+- 실행 후 웹 브라우저에서 `http://localhost:5173/` 접속하여 실시간 개발 화면 확인.
+
+### 4) 단일 HTML 배포 파일 번들링 빌드 (`pingpong-club-scoreboard.html`)
+```bash
+npm run build && cp dist/index.html pingpong-club-scoreboard.html
+```
+- 빌드 결과물인 `pingpong-club-scoreboard.html` 파일만 보유하고 있으면 별도의 웹 서버나 인터넷 연결 없이 단독 실행이 가능합니다.
+
+---
+
+## 2. 🏆 최종 산출물 (`pingpong-club-scoreboard.html`) 포함 주요 기능
+
+1. **시니어 친화적 웹 UI & 글자 크기 조절**
+   - 어르신들도 시원하게 보실 수 있는 고대비 다크 모드 및 시니어 스포티 디자인.
+   - 상단 제어바에서 **`[보통 (1.0)]`**, **`[크게 (1.2)]`** 글자 크기 조절 지원 및 음성 안내(TTS) 켜기/끄기.
+
+2. **다중 동호회(100+개) & 모임 날짜별 히스토리 관리**
+   - **동호회 관리**: 100개 이상의 동호회를 각각 독립적으로 생성 및 선택 관리.
+   - **모임 히스토리(날짜 페이지)**: 과거 모임 결과를 보존하면서 새 모임 날짜 페이지를 계속 추가 생성 가능.
+
+3. **3개 카테고리 기반 선수 관리 명단 시스템**
+   - **`[🏢 동호회 선수]`**, **`[⭐ Guest 선수]`**, **`[⚙️ 선수 추가/관리]`** 3개 메뉴 구분.
+   - 클릭 한 번으로 오늘의 참가자 지정.
+   - 당일 부수(선수부, 1부~13부) 수정 시 과거 모임 기록의 부수는 안전하게 유지되는 모임별 독립 부수 보존.
+
+4. **실시간 풀리그 대진표 & 경기 기록 보존**
+   - **종이 대진표 뷰 (격자표)** 및 **순서별 경기 진행 뷰** 지원.
+   - 게임 운영 도중 참가 선수가 추가되거나 변경되어도 **이미 입력된 기존 승패 및 세트 점수는 삭제되지 않고 유지**.
+
+5. **실시간 순위표 & 동호회 통산 누적 순위표 (가로 탭 UX)**
+   - **`🏆 오늘 모임 실시간 순위표`**: 오늘 모임 경기 결과 기반 승수, 승자승, 세트 득실율, 순위 결정 사유 실시간 계산.
+   - **`📊 동호회 통산 누적 순위표`**: 해당 동호회 안에서만 전체 모임 기록을 합산한 통산 누적 순위표 제공 (다른 동호회와 합산되지 않음, 마지막 모임 날짜 명시).
+
+6. **결과저장 (PNG 고화질 이미지 추출)**
+   - **`[결과저장]`** 클릭 시 상단 모임정보 + 선수명단 + 대진표 + 순위표를 PNG 이미지 파일로 저장.
+   - 통산 누적 순위표 탭 내 전용 **`[결과저장]`** 클릭 시 통산 누적 순위표 카드만 독립 PNG 저장.
+
+7. **데이터 내장 HTML 내보내기 & JSON 백업/복원**
+   - **`[📂 데이터 포함 HTML 저장]`**: 브라우저에 누적된 데이터 전체가 코드 내부에 포함된 HTML 파일 저장. 원드라이브(OneDrive)로 공유 후 휴대폰/갤럭시 탭에서 열면 복원 절차 없이 100% 모임 히스토리 실행.
+   - **`[백업 (.json)]` / `[복원 (.json)]`**: 전체 모임 데이터를 JSON 백업 파일로 저장 및 복원.
+
+8. **크로스 디바이스 & 모바일/태블릿 완전 호환**
+   - PC, 갤럭시 폰, 갤럭시 탭 S9(SM-X710, Android 16), iPad 등 모바일 단말기 팝업 및 터치 호환성 완벽 해결.
+
+---
+
+## 3. 📖 최종 산출물 (`pingpong-club-scoreboard.html`) 사용법 설명
+
+### Step 1. 파일 실행하기
+- 다운로드받은 `pingpong-club-scoreboard.html` 파일 아이콘을 더블클릭하거나 크롬(Chrome), 삼성 인터넷, 사파리(Safari) 등 웹 브라우저로 엽니다. (별도 프로그램 설치나 인터넷 연결 필요 없음)
+
+### Step 2. 동호회 및 모임 날짜 선택/생성
+- 상단 **`[동호회 생성]`** 및 **`[동호회 목록]`** 버튼을 통해 원하는 동호회를 선택하거나 신규 동호회를 생성합니다.
+- **`[+ 새 모임 생성]`** 또는 **`[모임 히스토리]`** 버튼을 눌러 오늘 모임 날짜 페이지를 새로 만듭니다.
+
+### Step 3. 오늘의 참가 선수 선택
+- **`[선수 선택/등록 메뉴]`**를 열어 **`🏢 동호회 선수`** 또는 **`⭐ Guest 선수`** 탭에서 오늘 출전한 선수를 클릭하여 참가자로 지정합니다.
+- 선수의 당일 부수를 변경하고 싶을 경우 이름 옆의 부수 선택창을 눌러 변경합니다.
+
+### Step 4. 경기 결과 입력
+- **`종이 대진표 뷰 (격자표)`**의 교차 셀 또는 **`순서별 경기 진행 뷰`**의 경기 카드를 클릭합니다.
+- 점수 입력 팝업창에서 승리 세트 수(예: 2:0, 2:1 등)를 입력하고 **`[점수 저장]`**을 누릅니다.
+
+### Step 5. 실시간 및 통산 순위 확인
+- 하단 **`🏆 오늘 모임 실시간 순위표`** 탭에서 오늘 모임의 실시간 순위 및 득실 세트, 동률 규정 사유를 확인합니다.
+- **`📊 동호회 통산 누적 순위표`** 탭을 클릭하여 전체 모임 기록이 누적 합산된 통산 순위를 확인합니다.
+
+### Step 6. 이미지 저장 및 기기 간 동기화
+- **`[결과저장]`** 버튼을 클릭하여 대진표 및 순위표 결과를 PNG 이미지로 저장해 카카오톡 등으로 공유합니다.
+- **`[📂 데이터 포함 HTML 저장]`** 버튼을 눌러 저장된 HTML 파일을 원드라이브(OneDrive)에 올려두면 휴대폰이나 갤럭시 탭에서도 별도 데이터 입력 없이 100% 동일하게 모임 기록을 불러와 사용할 수 있습니다.
