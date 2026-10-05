@@ -212,21 +212,21 @@ export default function App() {
     });
   };
 
-  // 1) Create New Club
+  // 1) Create New Club (Resets all rosters & active players to empty)
   const handleCreateClub = (name) => {
     const newClubId = `c_${Date.now()}`;
     const firstSession = {
       id: `s_${Date.now()}`,
       date: getTodayISO(),
-      players: PAPER_SAMPLE_PLAYERS,
-      matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+      players: [],
+      matches: [],
       createdAt: Date.now(),
     };
 
     const newClub = {
       id: newClubId,
       name,
-      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
+      masterRoster: [], // Completely reset roster for newly created club
       activeSessionId: firstSession.id,
       sessions: [firstSession],
       createdAt: Date.now(),
@@ -236,22 +236,15 @@ export default function App() {
     setActiveClubId(newClubId);
   };
 
-  // 2) Create New Meeting Session (Date Page)
+  // 2) Create New Meeting Session (Resets Today's Participants to empty, preserves master roster)
   const handleCreateSession = (newDate) => {
     const newSessionId = `s_${Date.now()}`;
-    const initialParticipants = masterRoster.map(p => ({
-      id: p.id,
-      name: p.name,
-      division: p.currentDivision || '7부',
-      avatarColor: p.avatarColor || '#3b82f6',
-      category: p.category || 'club',
-    }));
 
     const newSession = {
       id: newSessionId,
       date: newDate,
-      players: initialParticipants,
-      matches: generateSchedule(initialParticipants),
+      players: [], // Reset today's participants to empty
+      matches: [],
       createdAt: Date.now(),
     };
 
