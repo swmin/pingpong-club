@@ -266,49 +266,55 @@ export default function PlayerManager({
 
               {/* Club Members Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginBottom: '16px' }}>
-                {clubMembers.map(p => {
-                  const isChecked = participantIds.has(p.id);
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => onToggleParticipant(p)}
-                      style={{
-                        backgroundColor: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-main)',
-                        border: `2px solid ${isChecked ? 'var(--accent-success)' : 'var(--border-color)'}`,
-                        borderRadius: 'var(--radius-md)',
-                        padding: '10px 12px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ fontWeight: '800', fontSize: 'var(--font-base)', color: isChecked ? 'var(--accent-success)' : 'var(--text-main)' }}>
-                        {p.name}
+                {clubMembers.length === 0 ? (
+                  <div style={{ gridColumn: '1 / -1', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px', padding: '14px 0' }}>
+                    등록된 동호회 선수가 없습니다. 아래 입력창에서 동호회 선수를 새로 추가해 주세요!
+                  </div>
+                ) : (
+                  clubMembers.map(p => {
+                    const isChecked = participantIds.has(p.id);
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => onToggleParticipant(p)}
+                        style={{
+                          backgroundColor: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-main)',
+                          border: `2px solid ${isChecked ? 'var(--accent-success)' : 'var(--border-color)'}`,
+                          borderRadius: 'var(--radius-md)',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ fontWeight: '800', fontSize: 'var(--font-base)', color: isChecked ? 'var(--accent-success)' : 'var(--text-main)' }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--accent-primary)', margin: '2px 0' }}>
+                          {p.currentDivision}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          color: isChecked ? 'var(--accent-success)' : 'var(--text-muted)',
+                          backgroundColor: isChecked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          marginTop: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {isChecked ? <Check size={12} /> : <Plus size={12} />}
+                          {isChecked ? '참가 중' : '선택'}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--accent-primary)', margin: '2px 0' }}>
-                        {p.currentDivision}
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        color: isChecked ? 'var(--accent-success)' : 'var(--text-muted)',
-                        backgroundColor: isChecked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        marginTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        {isChecked ? <Check size={12} /> : <Plus size={12} />}
-                        {isChecked ? '참가 중' : '선택'}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* Inline Form to Add New Club Member */}
@@ -316,7 +322,7 @@ export default function PlayerManager({
                 <span style={{ fontWeight: '800', alignSelf: 'center', fontSize: '14px' }}>➕ 신규 동호회 선수 등록:</span>
                 <input
                   type="text"
-                  placeholder="이름 (예: 홍길동)"
+                  placeholder="선수 이름 입력 (예: 홍길동)"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
@@ -349,7 +355,7 @@ export default function PlayerManager({
               {/* Guest Members Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginBottom: '16px' }}>
                 {guestMembers.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', fontSize: '14px', padding: '14px 0' }}>
+                  <div style={{ gridColumn: '1 / -1', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px', padding: '14px 0' }}>
                     등록된 Guest 선수가 없습니다. 아래 입력창에서 게스트를 추가해 보세요!
                   </div>
                 ) : (
@@ -404,7 +410,7 @@ export default function PlayerManager({
                 <span style={{ fontWeight: '800', alignSelf: 'center', fontSize: '14px' }}>➕ 신규 Guest 선수 등록:</span>
                 <input
                   type="text"
-                  placeholder="게스트 이름 (예: 이게스트)"
+                  placeholder="게스트 이름 입력 (예: 김게스트)"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
@@ -439,7 +445,7 @@ export default function PlayerManager({
                 <span style={{ fontWeight: '800', alignSelf: 'center', fontSize: '14px' }}>➕ 신규 선수 추가:</span>
                 <input
                   type="text"
-                  placeholder="선수 이름"
+                  placeholder="선수 이름 입력 (예: 이탁구)"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
                   style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
@@ -479,94 +485,102 @@ export default function PlayerManager({
                     </tr>
                   </thead>
                   <tbody>
-                    {masterRoster.map(p => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '10px', fontWeight: '800' }}>
-                          {editingPlayerId === p.id ? (
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
-                            />
-                          ) : (
-                            <span>{p.name}</span>
-                          )}
-                        </td>
-
-                        <td style={{ padding: '10px' }}>
-                          {editingPlayerId === p.id ? (
-                            <select
-                              value={editCategory}
-                              onChange={e => setEditCategory(e.target.value)}
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
-                            >
-                              <option value="club">동호회 선수</option>
-                              <option value="guest">Guest 선수</option>
-                            </select>
-                          ) : (
-                            <span style={{
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              color: p.category === 'guest' ? 'var(--accent-purple)' : 'var(--accent-primary)',
-                              backgroundColor: p.category === 'guest' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                            }}>
-                              {p.category === 'guest' ? 'Guest' : '동호회'}
-                            </span>
-                          )}
-                        </td>
-
-                        <td style={{ padding: '10px' }}>
-                          {editingPlayerId === p.id ? (
-                            <select
-                              value={editDivision}
-                              onChange={e => setEditDivision(e.target.value)}
-                              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontWeight: '700' }}
-                            >
-                              {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                          ) : (
-                            <span style={{ fontWeight: '700', color: 'var(--accent-primary)' }}>{p.currentDivision}</span>
-                          )}
-                        </td>
-
-                        <td style={{ padding: '10px', textAlign: 'right' }}>
-                          {editingPlayerId === p.id ? (
-                            <button
-                              className="btn-primary"
-                              onClick={() => handleSaveMasterEdit(p.id)}
-                              style={{ padding: '4px 12px', fontSize: '13px', width: 'auto', display: 'inline-flex' }}
-                            >
-                              저장
-                            </button>
-                          ) : (
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                              <button
-                                className="btn-secondary"
-                                onClick={() => {
-                                  setEditingPlayerId(p.id);
-                                  setEditName(p.name);
-                                  setEditDivision(p.currentDivision);
-                                  setEditCategory(p.category || 'club');
-                                }}
-                                style={{ padding: '4px 8px', fontSize: '12px' }}
-                              >
-                                <Edit2 size={14} /> 수정
-                              </button>
-                              <button
-                                className="btn-secondary"
-                                onClick={() => handleDeleteMasterPlayer(p.id)}
-                                style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--accent-danger)' }}
-                              >
-                                <Trash2 size={14} /> 삭제
-                              </button>
-                            </div>
-                          )}
+                    {masterRoster.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '20px' }}>
+                          등록된 선수가 없습니다. 위 입력창에서 선수를 추가해 주세요.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      masterRoster.map(p => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '10px', fontWeight: '800' }}>
+                            {editingPlayerId === p.id ? (
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
+                              />
+                            ) : (
+                              <span>{p.name}</span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '10px' }}>
+                            {editingPlayerId === p.id ? (
+                              <select
+                                value={editCategory}
+                                onChange={e => setEditCategory(e.target.value)}
+                                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
+                              >
+                                <option value="club">동호회 선수</option>
+                                <option value="guest">Guest 선수</option>
+                              </select>
+                            ) : (
+                              <span style={{
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                color: p.category === 'guest' ? 'var(--accent-purple)' : 'var(--accent-primary)',
+                                backgroundColor: p.category === 'guest' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                              }}>
+                                {p.category === 'guest' ? 'Guest' : '동호회'}
+                              </span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '10px' }}>
+                            {editingPlayerId === p.id ? (
+                              <select
+                                value={editDivision}
+                                onChange={e => setEditDivision(e.target.value)}
+                                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontWeight: '700' }}
+                              >
+                                {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            ) : (
+                              <span style={{ fontWeight: '700', color: 'var(--accent-primary)' }}>{p.currentDivision}</span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '10px', textAlign: 'right' }}>
+                            {editingPlayerId === p.id ? (
+                              <button
+                                className="btn-primary"
+                                onClick={() => handleSaveMasterEdit(p.id)}
+                                style={{ padding: '4px 12px', fontSize: '13px', width: 'auto', display: 'inline-flex' }}
+                              >
+                                저장
+                              </button>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                <button
+                                  className="btn-secondary"
+                                  onClick={() => {
+                                    setEditingPlayerId(p.id);
+                                    setEditName(p.name);
+                                    setEditDivision(p.currentDivision);
+                                    setEditCategory(p.category || 'club');
+                                  }}
+                                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                                >
+                                  <Edit2 size={14} /> 수정
+                                </button>
+                                <button
+                                  className="btn-secondary"
+                                  onClick={() => handleDeleteMasterPlayer(p.id)}
+                                  style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--accent-danger)' }}
+                                >
+                                  <Trash2 size={14} /> 삭제
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

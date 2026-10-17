@@ -204,7 +204,7 @@ export default function RankingTable({
           }}
         >
           <BarChart3 size={18} />
-          <span>📊 동호회 통산 누적 순위표 ({sessionsCount}개 모임 합산{lastSessionDateFormatted ? `, ${lastSessionDateFormatted}` : ''})</span>
+          <span>📊 동호회 통산 누적 순위표{clubName ? `[${clubName}]` : ''}</span>
         </button>
       </div>
 

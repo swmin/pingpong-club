@@ -126,6 +126,7 @@ export default function Header({
               {isEditingTitle ? (
                 <input
                   type="text"
+                  placeholder="동호회 이름 입력 (예: 화목 탁구 동호회)"
                   value={leagueTitle}
                   onChange={e => setLeagueTitle(e.target.value)}
                   onBlur={() => setIsEditingTitle(false)}
@@ -154,7 +155,13 @@ export default function Header({
                   }}
                   title="클릭하여 동호회 이름 수정"
                 >
-                  {leagueTitle}
+                  {leagueTitle ? (
+                    leagueTitle
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: '400' }}>
+                      동호회 이름을 입력하세요
+                    </span>
+                  )}
                   <span data-html2canvas-ignore="true" style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '600' }}>[수정]</span>
                 </h1>
               )}

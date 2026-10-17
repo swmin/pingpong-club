@@ -98,6 +98,14 @@ button svg {
   pointer-events: none;
 }
 
+/* Grey Italic Placeholder styling for all input elements */
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  opacity: 0.85;
+}
+
 button:active {
   transform: scale(0.97);
 }

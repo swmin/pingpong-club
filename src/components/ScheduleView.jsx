@@ -41,72 +41,78 @@ export default function ScheduleView({ players, matches, onSelectMatchCell }) {
 
       {/* Match Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-        {filteredMatches.map((match) => {
-          const pA = playersMap[match.playerAId] || { name: '선수A' };
-          const pB = playersMap[match.playerBId] || { name: '선수B' };
-          const isCompleted = match.status === 'completed';
-          const isForfeit = match.status === 'forfeit';
+        {filteredMatches.length === 0 ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#94a3b8', fontStyle: 'italic', fontSize: '15px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            🏓 생성된 경기가 없습니다. [선수 선택/등록 메뉴]에서 2명 이상의 선수를 선택하면 자동으로 대진표가 생성됩니다.
+          </div>
+        ) : (
+          filteredMatches.map((match) => {
+            const pA = playersMap[match.playerAId] || { name: '선수A' };
+            const pB = playersMap[match.playerBId] || { name: '선수B' };
+            const isCompleted = match.status === 'completed';
+            const isForfeit = match.status === 'forfeit';
 
-          return (
-            <div
-              key={match.id}
-              className={`schedule-card ${match.status === 'pending' ? 'active-match' : ''}`}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                {/* Round / Match Number */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  <span>경기 #{match.orderNumber} (라운드 {match.round})</span>
-                  {isCompleted && <span style={{ color: 'var(--accent-success)', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> 완료</span>}
-                  {isForfeit && <span style={{ color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={14} /> 기권</span>}
-                  {!isCompleted && !isForfeit && <span style={{ color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> 대기중</span>}
-                </div>
-
-                {/* Match Players & Score */}
-                <div className="match-players" style={{ marginTop: '6px' }}>
-                  {/* Player A */}
-                  <div style={{ flex: 1, textDecoration: isCompleted && match.winnerId !== pA.id ? 'line-through opacity(0.6)' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: pA.avatarColor }} />
-                      <span>{pA.name}</span>
-                    </div>
-                  </div>
-
-                  {/* Score or VS */}
-                  <div style={{ fontSize: 'var(--font-xl)', fontWeight: '900', color: isCompleted ? 'var(--accent-success)' : 'var(--text-muted)' }}>
-                    {isCompleted ? `${match.playerASets} : ${match.playerBSets}` :
-                     isForfeit ? 'X' :
-                     <span className="vs-badge">VS</span>}
-                  </div>
-
-                  {/* Player B */}
-                  <div style={{ flex: 1, textAlign: 'right', textDecoration: isCompleted && match.winnerId !== pB.id ? 'line-through opacity(0.6)' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                      <span>{pB.name}</span>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: pB.avatarColor }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <button
-                className="btn-primary"
-                onClick={() => onSelectMatchCell(match)}
-                style={{
-                  width: 'auto',
-                  padding: '10px 16px',
-                  fontSize: '14px',
-                  backgroundColor: isCompleted ? 'var(--bg-main)' : 'var(--accent-success)',
-                  color: isCompleted ? 'var(--text-main)' : 'white',
-                  border: isCompleted ? '1px solid var(--border-color)' : 'none',
-                }}
+            return (
+              <div
+                key={match.id}
+                className={`schedule-card ${match.status === 'pending' ? 'active-match' : ''}`}
               >
-                <PlayCircle size={16} />
-                <span>{isCompleted ? '수정' : '입력'}</span>
-              </button>
-            </div>
-          );
-        })}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                  {/* Round / Match Number */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <span>경기 #{match.orderNumber} (라운드 {match.round})</span>
+                    {isCompleted && <span style={{ color: 'var(--accent-success)', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> 완료</span>}
+                    {isForfeit && <span style={{ color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '4px' }}><XCircle size={14} /> 기권</span>}
+                    {!isCompleted && !isForfeit && <span style={{ color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> 대기중</span>}
+                  </div>
+
+                  {/* Match Players & Score */}
+                  <div className="match-players" style={{ marginTop: '6px' }}>
+                    {/* Player A */}
+                    <div style={{ flex: 1, textDecoration: isCompleted && match.winnerId !== pA.id ? 'line-through opacity(0.6)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: pA.avatarColor }} />
+                        <span>{pA.name}</span>
+                      </div>
+                    </div>
+
+                    {/* Score or VS */}
+                    <div style={{ fontSize: 'var(--font-xl)', fontWeight: '900', color: isCompleted ? 'var(--accent-success)' : 'var(--text-muted)' }}>
+                      {isCompleted ? `${match.playerASets} : ${match.playerBSets}` :
+                       isForfeit ? 'X' :
+                       <span className="vs-badge">VS</span>}
+                    </div>
+
+                    {/* Player B */}
+                    <div style={{ flex: 1, textAlign: 'right', textDecoration: isCompleted && match.winnerId !== pB.id ? 'line-through opacity(0.6)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                        <span>{pB.name}</span>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: pB.avatarColor }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  className="btn-primary"
+                  onClick={() => onSelectMatchCell(match)}
+                  style={{
+                    width: 'auto',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    backgroundColor: isCompleted ? 'var(--bg-main)' : 'var(--accent-success)',
+                    color: isCompleted ? 'var(--text-main)' : 'white',
+                    border: isCompleted ? '1px solid var(--border-color)' : 'none',
+                  }}
+                >
+                  <PlayCircle size={16} />
+                  <span>{isCompleted ? '수정' : '입력'}</span>
+                </button>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

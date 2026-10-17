@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { PAPER_SAMPLE_PLAYERS, generatePaperSampleMatches } from './utils/sampleData';
 import { generateSchedule, calculateRankings, calculateCumulativeRankings } from './utils/leagueCalculations';
 
 import SeniorFontControls from './components/SeniorFontControls';
@@ -16,6 +15,10 @@ import CreateSessionModal from './components/CreateSessionModal';
 import SessionSelectModal from './components/SessionSelectModal';
 
 import { Grid, Calendar } from 'lucide-react';
+
+// Release storage namespace (independent of old dev/test data keys)
+const STORAGE_CLUBS_KEY = 'pingpong_release_v1_clubs';
+const STORAGE_ACTIVE_KEY = 'pingpong_release_v1_active_club';
 
 // Safe localStorage helper with in-memory fallback for Android WebViews / Galaxy Tab file:// Security Restrictions
 const memoryStorage = {};
@@ -73,24 +76,27 @@ export default function App() {
 
   // Initialize dataset & handle migration to multi-club & multi-session
   useEffect(() => {
-    const savedClubs = safeGetItem('tt_clubs_data_v2');
-    const savedActiveId = safeGetItem('tt_active_club_id');
+    // Release build: use a dedicated storage namespace so that any previous
+    // development/test data (tt_clubs_data_v2, v3 ...) is never loaded.
+    const savedClubs = safeGetItem(STORAGE_CLUBS_KEY);
+    const savedActiveId = safeGetItem(STORAGE_ACTIVE_KEY);
 
     if (savedClubs) {
       try {
         const parsedClubs = JSON.parse(savedClubs);
         if (Array.isArray(parsedClubs) && parsedClubs.length > 0) {
-          // Ensure sessions exist in each club
+          // Ensure sessions exist in each club and strip any legacy sample name
           const sanitizedClubs = parsedClubs.map(club => {
-            const masterRoster = club.masterRoster || PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' }));
+            const clubName = club.name || '';
+            const masterRoster = club.masterRoster || [];
             let sessions = club.sessions;
 
             if (!Array.isArray(sessions) || sessions.length === 0) {
               const defaultSession = {
                 id: `s_${Date.now()}`,
                 date: club.meetingDate || getTodayISO(),
-                players: club.players || PAPER_SAMPLE_PLAYERS,
-                matches: club.matches || generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+                players: [],
+                matches: [],
                 createdAt: Date.now(),
               };
               sessions = [defaultSession];
@@ -98,6 +104,7 @@ export default function App() {
 
             return {
               ...club,
+              name: clubName,
               masterRoster,
               sessions,
               activeSessionId: club.activeSessionId && sessions.some(s => s.id === club.activeSessionId) ? club.activeSessionId : sessions[0].id,
@@ -109,7 +116,7 @@ export default function App() {
           return;
         }
       } catch (e) {
-        console.error('Failed to parse v2 multi-clubs data', e);
+        console.error('Failed to parse v3 multi-clubs data', e);
       }
     }
 
@@ -122,19 +129,19 @@ export default function App() {
       return;
     }
 
-    // Default Club & Initial Session
+    // Default Clean Initial Club & Session for Release
     const initialSession = {
       id: 's_default',
       date: getTodayISO(),
-      players: PAPER_SAMPLE_PLAYERS,
-      matches: generatePaperSampleMatches(PAPER_SAMPLE_PLAYERS),
+      players: [],
+      matches: [],
       createdAt: Date.now(),
     };
 
     const initialClub = {
       id: 'c_default',
-      name: '정정회 (정정숙 회장, 정용호 총무)',
-      masterRoster: PAPER_SAMPLE_PLAYERS.map(p => ({ ...p, category: 'club', currentDivision: p.division || '7부' })),
+      name: '',
+      masterRoster: [],
       activeSessionId: initialSession.id,
       sessions: [initialSession],
       createdAt: Date.now(),
@@ -147,12 +154,25 @@ export default function App() {
   // Sync clubs & active ID to localstorage
   useEffect(() => {
     if (clubs.length > 0) {
-      safeSetItem('tt_clubs_data_v2', JSON.stringify(clubs));
+      safeSetItem(STORAGE_CLUBS_KEY, JSON.stringify(clubs));
       if (activeClubId) {
-        safeSetItem('tt_active_club_id', activeClubId);
+        safeSetItem(STORAGE_ACTIVE_KEY, activeClubId);
       }
     }
   }, [clubs, activeClubId]);
+
+  // Factory reset: clears club name, today's participants, player rosters,
+  // all clubs and all meeting histories -> clean first-run state.
+  const handleFactoryReset = () => {
+    if (!confirm('⚠️ 모든 데이터(동호회 목록, 모임 히스토리, 선수 명단, 점수 기록)를 완전히 삭제하고 처음 설치한 상태로 되돌립니다.\n\n필요하면 먼저 [백업 (.json)]을 해 두세요.\n\n정말 전체 초기화하시겠습니까?')) return;
+    const now = Date.now();
+    const freshSession = { id: `s_${now}`, date: getTodayISO(), players: [], matches: [], createdAt: now };
+    const freshClub = { id: `c_${now}`, name: '', masterRoster: [], activeSessionId: freshSession.id, sessions: [freshSession], createdAt: now };
+    setClubs([freshClub]);
+    setActiveClubId(freshClub.id);
+    setSelectedMatch(null);
+    alert('✅ 전체 초기화가 완료되었습니다.');
+  };
 
   // Apply font scale to root DOM
   useEffect(() => {
@@ -163,7 +183,7 @@ export default function App() {
   // Get current active club
   const activeClub = clubs.find(c => c.id === activeClubId) || clubs[0] || {
     id: 'c_fallback',
-    name: '동호회',
+    name: '',
     masterRoster: [],
     sessions: [],
   };
@@ -179,13 +199,9 @@ export default function App() {
   const players = activeSession.players || [];
   const matches = activeSession.matches || [];
   const meetingDate = activeSession.date || getTodayISO();
-  const leagueTitle = activeClub.name || '동호회';
+  const leagueTitle = activeClub.name !== undefined ? activeClub.name : '';
 
-  const masterRoster = activeClub.masterRoster || PAPER_SAMPLE_PLAYERS.map(p => ({
-    ...p,
-    category: p.category || 'club',
-    currentDivision: p.currentDivision || p.division || '7부',
-  }));
+  const masterRoster = activeClub.masterRoster || [];
 
   // Helper to update active club
   const updateActiveClub = (updater) => {
@@ -467,6 +483,7 @@ export default function App() {
         onExportEmbeddedHTML={handleExportEmbeddedHTML}
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
+        onFactoryReset={handleFactoryReset}
       />
 
       {/* Export Target Container (Captured when clicking 결과저장) */}
