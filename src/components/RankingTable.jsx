@@ -14,6 +14,8 @@ export default function RankingTable({
   lastSessionDate = '',
 }) {
   const [activeTab, setActiveTab] = useState('session'); // 'session' | 'cumulative'
+  // Cumulative table sort: null = default (current rank order)
+  const [sortConfig, setSortConfig] = useState(null); // { key, dir: 'asc' | 'desc' }
 
   // Helper to format Korean date without duplicate "일" bug: e.g. "2026년 10월 4일 (일)"
   const getFormattedKoreanDate = (dateString) => {
@@ -149,6 +151,64 @@ export default function RankingTable({
     ));
   };
 
+  // ---- Cumulative table sorting ----
+  const SORT_VALUE = {
+    name: (s) => s.name || '',
+    matches: (s) => s.matchesPlayed,
+    record: (s) => s.wins * 10000 - s.losses, // more wins first, then fewer losses
+    sets: (s) => s.setsWon * 10000 - s.setsLost, // more sets won first, then fewer lost
+    diff: (s) => s.setDiff,
+    ratio: (s) => s.setRatio || 0,
+  };
+
+  // Click a column header: first click = descending, next click = ascending (toggle).
+  // Clicking a different column starts again with descending.
+  const toggleSort = (key) => {
+    setSortConfig(prev => {
+      if (prev && prev.key === key) {
+        return { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' };
+      }
+      return { key, dir: 'desc' };
+    });
+  };
+
+  // Clicking the 순위 header restores the default (rank) order
+  const resetSort = () => setSortConfig(null);
+
+  const sortedCumulative = (() => {
+    if (!sortConfig) return cumulativeRankings;
+    const getVal = SORT_VALUE[sortConfig.key];
+    const mul = sortConfig.dir === 'asc' ? 1 : -1;
+    return [...cumulativeRankings].sort((a, b) => {
+      const va = getVal(a);
+      const vb = getVal(b);
+      let cmp = typeof va === 'string' ? va.localeCompare(vb, 'ko') : va - vb;
+      if (cmp === 0) return a.rank - b.rank;
+      return cmp * mul;
+    });
+  })();
+
+  const renderSortableTh = (label, key, extraStyle = {}) => {
+    const active = sortConfig && sortConfig.key === key;
+    return (
+      <th
+        onClick={() => toggleSort(key)}
+        title={`${label} 클릭하여 정렬 (처음: 내림차순, 다시 클릭: 오름차순)`}
+        aria-sort={active ? (sortConfig.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        style={{
+          padding: '12px 8px',
+          cursor: 'pointer',
+          userSelect: 'none',
+          color: active ? '#f59e0b' : undefined,
+          fontWeight: active ? '900' : undefined,
+          ...extraStyle,
+        }}
+      >
+        {label}
+      </th>
+    );
+  };
+
   return (
     <div style={{ marginTop: '24px' }}>
       {/* Horizontal Tab Switcher Bar */}
@@ -183,7 +243,7 @@ export default function RankingTable({
         <button
           className="tab-btn"
           type="button"
-          onClick={() => setActiveTab('cumulative')}
+          onClick={() => { setActiveTab('cumulative'); setSortConfig(null); }}
           style={{
             flex: 1,
             minWidth: '200px',
@@ -313,18 +373,22 @@ export default function RankingTable({
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '600px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '14px' }}>
-                  <th style={{ padding: '12px 8px', width: '60px' }}>순위</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'left' }}>선수 이름</th>
-                  <th style={{ padding: '12px 8px' }}>경기수</th>
-                  <th style={{ padding: '12px 8px' }}>승 / 패</th>
-                  <th style={{ padding: '12px 8px' }}>득세트 / 실세트</th>
-                  <th style={{ padding: '12px 8px' }}>세트 득실차</th>
-                  <th style={{ padding: '12px 8px' }}>세트 득실율</th>
+                  <th
+                    onClick={resetSort}
+                    title="클릭하여 기본 순위 순서로 되돌리기"
+                    style={{ padding: '12px 8px', width: '60px', cursor: 'pointer', userSelect: 'none' }}
+                  >순위</th>
+                  {renderSortableTh('선수 이름', 'name', { textAlign: 'left' })}
+                  {renderSortableTh('경기수', 'matches')}
+                  {renderSortableTh('승 / 패', 'record')}
+                  {renderSortableTh('득세트 / 실세트', 'sets')}
+                  {renderSortableTh('세트 득실차', 'diff')}
+                  {renderSortableTh('세트 득실율', 'ratio')}
                   <th style={{ padding: '12px 8px', textAlign: 'left' }}>순위 결정 사유</th>
                 </tr>
               </thead>
               <tbody>
-                {renderTableRows(cumulativeRankings)}
+                {renderTableRows(sortedCumulative)}
               </tbody>
             </table>
           </div>
