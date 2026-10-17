@@ -21,14 +21,14 @@ export default function MatrixGridView({ players, matches, rankingsMap, onSelect
 
   if (!players || players.length === 0) {
     return (
-      <div className="matrix-container" id="export-area" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', fontStyle: 'italic', fontSize: '15px' }}>
+      <div className="matrix-container" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8', fontStyle: 'italic', fontSize: '15px' }}>
         📋 오늘의 출전 선수가 아직 선택되지 않았습니다. 위의 <strong>[선수 선택/등록 메뉴]</strong>에서 출전할 선수를 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="matrix-container" id="export-area">
+    <div className="matrix-container">
       <table className="matrix-table">
         <thead>
           <tr>
@@ -160,7 +160,8 @@ export default function MatrixGridView({ players, matches, rankingsMap, onSelect
                   {rank === 1 ? <span className="rank-badge rank-1">🥇 1</span> :
                    rank === 2 ? <span className="rank-badge rank-2">🥈 2</span> :
                    rank === 3 ? <span className="rank-badge rank-3">🥉 3</span> :
-                   <span style={{ fontWeight: '800', fontSize: 'var(--font-lg)' }}>{rank}위</span>}
+                   rank !== '-' ? <span style={{ fontWeight: '800', fontSize: 'var(--font-lg)' }}>{rank}위</span> :
+                   <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>-</span>}
                 </td>
               </tr>
             );

@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function ScoreModal({ match, players, onClose, onSaveScore, ttsEnabled }) {
+  const [scoreA, setScoreA] = useState(match?.playerASets || 0);
+  const [scoreB, setScoreB] = useState(match?.playerBSets || 0);
+  const [isForfeit, setIsForfeit] = useState(match?.status === 'forfeit');
+
+  useEffect(() => {
+    if (!match) return;
+    setScoreA(match.playerASets || 0);
+    setScoreB(match.playerBSets || 0);
+    setIsForfeit(match.status === 'forfeit');
+  }, [match]);
+
   if (!match) return null;
 
   const playersMap = {};
@@ -9,16 +20,6 @@ export default function ScoreModal({ match, players, onClose, onSaveScore, ttsEn
 
   const playerA = playersMap[match.playerAId] || { name: '선수 A' };
   const playerB = playersMap[match.playerBId] || { name: '선수 B' };
-
-  const [scoreA, setScoreA] = useState(match.playerASets || 0);
-  const [scoreB, setScoreB] = useState(match.playerBSets || 0);
-  const [isForfeit, setIsForfeit] = useState(match.status === 'forfeit');
-
-  useEffect(() => {
-    setScoreA(match.playerASets || 0);
-    setScoreB(match.playerBSets || 0);
-    setIsForfeit(match.status === 'forfeit');
-  }, [match]);
 
   const handleApplyPreset = (a, b) => {
     setScoreA(a);

@@ -91,7 +91,7 @@ export function generateSchedule(players, existingMatches = []) {
 }
 
 // Calculate comprehensive statistics & rankings (for a single meeting or cumulative)
-export function calculateRankings(players, matches) {
+export function calculateRankings(players, matches, { includeUnplayed = true } = {}) {
   if (!players || players.length === 0) return { rankings: [], tieBreakerExplanations: [] };
 
   // 1. Initial Stats map
@@ -109,7 +109,7 @@ export function calculateRankings(players, matches) {
       setsLost: 0,
       setDiff: 0,
       setRatio: 0,
-      rank: 0,
+      rank: null,
       tieReason: '',
     };
   });
@@ -170,8 +170,9 @@ export function calculateRankings(players, matches) {
     st.setRatio = st.setsLost > 0 ? st.setsWon / st.setsLost : (st.setsWon > 0 ? st.setsWon * 100 : 0);
   });
 
-  // Filter out players with 0 matches played if calculating cumulative stats
+  // Separate players with completed matches from unplayed participants
   const activeStatsList = Object.values(statsMap).filter(st => st.matchesPlayed > 0);
+  const unplayedStatsList = Object.values(statsMap).filter(st => st.matchesPlayed === 0);
 
   // 2. Group players by Wins
   const winsGroups = {};
@@ -300,10 +301,19 @@ export function calculateRankings(players, matches) {
     }
   });
 
-  // Assign 1-indexed ranks
+  // Assign 1-indexed ranks to players who have played at least 1 match
   finalRankedList.forEach((st, idx) => {
     st.rank = idx + 1;
   });
+
+  // Append unplayed session participants with rank: null so their 0전 0승 0패 stats are visible
+  if (includeUnplayed && unplayedStatsList.length > 0) {
+    unplayedStatsList.forEach(st => {
+      st.rank = null;
+      st.tieReason = '경기 대기중';
+      finalRankedList.push(st);
+    });
+  }
 
   return {
     rankings: finalRankedList,
@@ -355,5 +365,5 @@ export function calculateCumulativeRankings(masterRoster, sessions) {
   });
 
   const allPlayers = Object.values(playerMap);
-  return calculateRankings(allPlayers, allMatches);
+  return calculateRankings(allPlayers, allMatches, { includeUnplayed: false });
 }

@@ -70,8 +70,17 @@ export default function ClubSelectModal({
           ) : (
             filteredClubs.map((club) => {
               const isActive = club.id === activeClubId;
-              const completedCount = club.matches ? club.matches.filter(m => m.status === 'completed' || m.status === 'forfeit').length : 0;
-              const totalMatches = club.matches ? club.matches.length : 0;
+              const rosterCount = Array.isArray(club.masterRoster)
+                ? club.masterRoster.length
+                : (club.players ? club.players.length : 0);
+              const sessions = Array.isArray(club.sessions) ? club.sessions : [];
+              const activeSession = sessions.find(s => s.id === club.activeSessionId) || sessions[0] || null;
+              const sessionPlayersCount = activeSession?.players
+                ? activeSession.players.length
+                : (club.players ? club.players.length : 0);
+              const sessionMatches = activeSession?.matches || club.matches || [];
+              const completedCount = sessionMatches.filter(m => m.status === 'completed' || m.status === 'forfeit').length;
+              const totalMatches = sessionMatches.length;
 
               return (
                 <div
@@ -112,7 +121,7 @@ export default function ClubSelectModal({
                     </div>
 
                     <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      참가선수: {club.players ? club.players.length : 0}명 | 진행: {completedCount}/{totalMatches} 경기 완료
+                      등록선수: {rosterCount}명 | 모임: {sessions.length || 1}회 | 현재 모임 참가: {sessionPlayersCount}명 ({completedCount}/{totalMatches} 경기 완료)
                     </div>
                   </div>
 

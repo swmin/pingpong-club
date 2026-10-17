@@ -102,7 +102,7 @@ export default function RankingTable({
         style={{
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: st.rank === 1 ? 'rgba(245, 158, 11, 0.08)' : 'transparent',
-          fontWeight: st.rank <= 3 ? '800' : '600',
+          fontWeight: st.rank && st.rank <= 3 ? '800' : '600',
           fontSize: 'var(--font-base)',
         }}
       >
@@ -111,7 +111,8 @@ export default function RankingTable({
           {st.rank === 1 ? <span className="rank-badge rank-1">🥇 1</span> :
            st.rank === 2 ? <span className="rank-badge rank-2">🥈 2</span> :
            st.rank === 3 ? <span className="rank-badge rank-3">🥉 3</span> :
-           <span className="rank-badge rank-other">{st.rank}</span>}
+           st.rank ? <span className="rank-badge rank-other">{st.rank}</span> :
+           <span className="rank-badge rank-other">-</span>}
         </td>
 
         {/* Name & Division */}
