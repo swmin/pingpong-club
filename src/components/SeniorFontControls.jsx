@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Type, Volume2, VolumeX, RefreshCw, Download, Upload, FileCode, Settings, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Type, Volume2, VolumeX, RefreshCw, Download, Upload, FileCode, Settings, ChevronRight, ChevronDown, AlertTriangle, Smartphone } from 'lucide-react';
 
 export default function SeniorFontControls({
   fontScale,
@@ -11,6 +11,8 @@ export default function SeniorFontControls({
   onExportJSON,
   onImportJSON,
   onFactoryReset,
+  pwa,
+  onOpenPwaModal,
 }) {
   const fileInputRef = useRef(null);
   const menuRef = useRef(null);
@@ -94,48 +96,84 @@ export default function SeniorFontControls({
         </div>
       </div>
 
-      {/* Settings Dropdown */}
-      <div ref={menuRef} style={{ position: 'relative' }}>
-        <button
-          className="btn-secondary"
-          onClick={() => { setIsMenuOpen(!isMenuOpen); setIsResetOpen(false); }}
-          aria-haspopup="true"
-          aria-expanded={isMenuOpen}
-          style={{
-            padding: '8px 14px',
-            fontWeight: '800',
-            borderColor: isMenuOpen ? 'var(--accent-primary)' : undefined,
-            color: isMenuOpen ? 'var(--accent-primary)' : undefined,
-          }}
-        >
-          <Settings size={18} />
-          <span>설정</span>
-          <ChevronDown size={16} style={{ transform: isMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
-        </button>
-
-        {isMenuOpen && (
-          <div
-            role="menu"
+      {/* Settings & App Install Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {!pwa?.isInstalled && (
+          <button
+            className="btn-secondary"
+            onClick={async () => {
+              if (pwa?.canPrompt) {
+                const res = await pwa.triggerInstall();
+                if (res !== 'accepted' && onOpenPwaModal) onOpenPwaModal();
+              } else if (onOpenPwaModal) {
+                onOpenPwaModal();
+              }
+            }}
             style={{
-              position: 'absolute',
-              top: 'calc(100% + 6px)',
-              left: 0,
-              zIndex: 1000,
-              minWidth: '280px',
-              padding: '6px',
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+              padding: '8px 14px',
+              fontWeight: '800',
+              borderColor: 'var(--accent-primary)',
+              color: 'var(--accent-primary)',
             }}
           >
-            {/* 1) Export Pre-populated HTML */}
-            <button role="menuitem" style={{ ...itemStyle, color: 'var(--accent-success)' }} {...hover}
-              onClick={runAndClose(onExportEmbeddedHTML)}
-              title="현재 브라우저에 누적된 모임 히스토리가 기본 저장된 HTML 파일 내보내기 (원드라이브/휴대폰용)">
-              <FileCode size={18} />
-              <span>📂 데이터 포함 HTML 저장 (원드라이브용)</span>
-            </button>
+            <Smartphone size={18} />
+            <span>앱 설치</span>
+          </button>
+        )}
+
+        <div ref={menuRef} style={{ position: 'relative' }}>
+          <button
+            className="btn-secondary"
+            onClick={() => { setIsMenuOpen(!isMenuOpen); setIsResetOpen(false); }}
+            aria-haspopup="true"
+            aria-expanded={isMenuOpen}
+            style={{
+              padding: '8px 14px',
+              fontWeight: '800',
+              borderColor: isMenuOpen ? 'var(--accent-primary)' : undefined,
+              color: isMenuOpen ? 'var(--accent-primary)' : undefined,
+            }}
+          >
+            <Settings size={18} />
+            <span>설정</span>
+            <ChevronDown size={16} style={{ transform: isMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
+          </button>
+
+          {isMenuOpen && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                left: 0,
+                zIndex: 1000,
+                minWidth: '280px',
+                padding: '6px',
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+              }}
+            >
+              {/* 0) PWA App Install & Share QR */}
+              <button
+                role="menuitem"
+                style={{ ...itemStyle, color: 'var(--accent-primary)' }}
+                {...hover}
+                onClick={runAndClose(onOpenPwaModal)}
+                title="스마트폰/태블릿에 앱으로 설치하거나 회원에게 설치 QR코드 공유"
+              >
+                <Smartphone size={18} />
+                <span>📲 앱 설치 및 회원 공유 (QR)</span>
+              </button>
+
+              {/* 1) Export Pre-populated HTML */}
+              <button role="menuitem" style={{ ...itemStyle, color: 'var(--accent-success)' }} {...hover}
+                onClick={runAndClose(onExportEmbeddedHTML)}
+                title="현재 브라우저에 누적된 모임 히스토리가 기본 저장된 HTML 파일 내보내기 (원드라이브/휴대폰용)">
+                <FileCode size={18} />
+                <span>📂 데이터 포함 HTML 저장 (원드라이브용)</span>
+              </button>
 
             {/* 2) Export JSON Backup */}
             <button role="menuitem" style={itemStyle} {...hover} onClick={runAndClose(onExportJSON)}
@@ -208,6 +246,7 @@ export default function SeniorFontControls({
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />
+        </div>
       </div>
     </div>
   );

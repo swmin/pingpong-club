@@ -15,7 +15,9 @@ import CreateSessionModal from './components/CreateSessionModal';
 import SessionSelectModal from './components/SessionSelectModal';
 import PlayerDrawView from './components/PlayerDrawView';
 import SyncPanel from './components/SyncPanel';
+import PwaInstallModal from './components/PwaInstallModal';
 import useRoomSync from './hooks/useRoomSync';
+import usePwaInstall from './hooks/usePwaInstall';
 import { mergeIncomingMatches } from './utils/syncMerge';
 
 import { Grid, Calendar, Users, Radio } from 'lucide-react';
@@ -60,6 +62,8 @@ export default function App() {
   const [isCreateSessionOpen, setIsCreateSessionOpen] = useState(false);
   const [isSelectSessionOpen, setIsSelectSessionOpen] = useState(false);
   const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
+  const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
+  const pwa = usePwaInstall();
 
   // Active View & Score Modal
   // 'player' | 'schedule' | 'grid' — 좁은 화면(폰 세로)은 선수별 보기, 넓은 화면은 격자표를 기본으로 사용
@@ -635,6 +639,8 @@ export default function App() {
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
         onFactoryReset={handleFactoryReset}
+        pwa={pwa}
+        onOpenPwaModal={() => setIsPwaModalOpen(true)}
       />
 
       {/* Export Target Container (Captured when clicking 결과저장) */}
@@ -853,6 +859,14 @@ export default function App() {
         <TieBreakerExplainer
           explanations={tieBreakerExplanations}
           onClose={() => setIsTieBreakerOpen(false)}
+        />
+      )}
+
+      {/* PWA App Install & QR Share Modal */}
+      {isPwaModalOpen && (
+        <PwaInstallModal
+          pwa={pwa}
+          onClose={() => setIsPwaModalOpen(false)}
         />
       )}
     </div>

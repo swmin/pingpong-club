@@ -22,5 +22,6 @@ function copySingleFileBundlePlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   plugins: [react(), viteSingleFile(), copySingleFileBundlePlugin()],
 })
