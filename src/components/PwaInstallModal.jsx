@@ -14,6 +14,11 @@ export default function PwaInstallModal({ pwa, onClose }) {
   const [shareUrl, setShareUrl] = useState(currentUrl);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [manualNotice, setManualNotice] = useState(false);
+
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  const isSamsungBrowser = /SamsungBrowser/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
   useEffect(() => {
     if (!shareUrl.trim()) return;
@@ -26,6 +31,8 @@ export default function PwaInstallModal({ pwa, onClose }) {
     const res = await pwa.triggerInstall();
     if (res === 'accepted') {
       onClose();
+    } else if (res === 'unavailable') {
+      setManualNotice(true);
     }
   };
 
@@ -99,10 +106,10 @@ export default function PwaInstallModal({ pwa, onClose }) {
               <CheckCircle2 size={22} />
               <span>이 기기에는 이미 앱으로 설치되어 실행 중입니다!</span>
             </div>
-          ) : pwa.canPrompt ? (
+          ) : (
             <>
               <div style={{ fontWeight: '900', marginBottom: '6px', fontSize: '16px' }}>
-                📲 원터치 앱 설치 준비 완료
+                📲 스마트폰·태블릿에 앱으로 설치하기
               </div>
               <div
                 style={{
@@ -112,66 +119,86 @@ export default function PwaInstallModal({ pwa, onClose }) {
                   lineHeight: 1.5,
                 }}
               >
-                아래 버튼을 누르면 스마트폰·태블릿 홈 화면과 앱 서랍에{' '}
-                <strong style={{ color: 'var(--text-main)' }}>탁구스코어</strong> 전용 앱이
-                바로 설치됩니다.
+                홈 화면과 앱 서랍에 <strong style={{ color: 'var(--text-main)' }}>탁구스코어</strong>{' '}
+                전용 앱 아이콘을 추가하여 주소창 없이 전체 화면으로 실행합니다.
               </div>
-              <button className="btn-primary" onClick={handleInstallClick}>
+
+              <button
+                className="btn-primary"
+                onClick={handleInstallClick}
+                style={{ marginBottom: '12px' }}
+              >
                 <Download size={20} />
-                <span>이 기기에 앱 바로 설치하기</span>
+                <span>📲 이 기기에 앱 바로 설치하기</span>
               </button>
-            </>
-          ) : (
-            <>
-              <div style={{ fontWeight: '900', marginBottom: '8px', fontSize: '15px' }}>
-                📲 스마트폰·태블릿에 앱으로 설치하는 방법
-              </div>
-              {!isHttp && (
+
+              {(manualNotice || !pwa.canPrompt) && (
                 <div
                   style={{
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                    border: '1px solid rgba(59, 130, 246, 0.35)',
-                    fontSize: '13px',
-                    lineHeight: 1.5,
-                    marginBottom: '10px',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    backgroundColor: manualNotice
+                      ? 'rgba(245, 158, 11, 0.14)'
+                      : 'rgba(59, 130, 246, 0.10)',
+                    border: manualNotice
+                      ? '1px solid rgba(245, 158, 11, 0.45)'
+                      : '1px solid rgba(59, 130, 246, 0.30)',
+                    fontSize: '13.5px',
+                    lineHeight: 1.65,
                     color: 'var(--text-main)',
                   }}
                 >
-                  💡 현재 로컬 HTML 파일(<code>file://</code>)로 열려 있습니다. 아래{' '}
-                  <strong>웹앱 주소</strong>로 접속하면 크롬·삼성 인터넷에서 정식 앱 아이콘으로
-                  설치할 수 있습니다.
+                  {!isHttp ? (
+                    <div>
+                      💡 현재 로컬 HTML 파일(<code>file://</code>)로 열려 있습니다.{' '}
+                      <strong>https://swmin.github.io/pingpong-club/</strong> 로 접속하시면 앱으로
+                      설치할 수 있습니다.
+                    </div>
+                  ) : isSamsungBrowser ? (
+                    <div>
+                      <strong>📌 삼성 인터넷에서 설치하는 방법 (2번 터치):</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        1. 화면 우측 하단의 <strong>[ ≡ ] (줄 3개 메뉴)</strong> 버튼을 누릅니다.
+                      </div>
+                      <div>
+                        2. <strong>[+ 현재 페이지 추가]</strong> ➔{' '}
+                        <strong style={{ color: 'var(--accent-primary)' }}>[홈 화면]</strong> (또는{' '}
+                        <strong>[앱스 화면]</strong>)을 누르면 즉시 앱이 설치됩니다!
+                      </div>
+                    </div>
+                  ) : isIOS ? (
+                    <div>
+                      <strong>📌 아이폰/아이패드(Safari)에서 설치하는 방법:</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        하단 <strong>[공유]</strong> 아이콘 ➔{' '}
+                        <strong style={{ color: 'var(--accent-primary)' }}>
+                          [홈 화면에 추가]
+                        </strong>
+                        를 누르면 앱이 설치됩니다.
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <strong>📌 자동 설치 창이 바로 뜨지 않는 경우 (크롬 / 삼성 인터넷):</strong>
+                      <div style={{ marginTop: '4px' }}>
+                        • <strong>갤럭시 크롬(Chrome)</strong>: 우측 상단{' '}
+                        <strong>[ ⋮ ] (점 3개 메뉴)</strong> ➔{' '}
+                        <strong style={{ color: 'var(--accent-primary)' }}>
+                          [홈 화면에 추가]
+                        </strong>{' '}
+                        또는 <strong style={{ color: 'var(--accent-primary)' }}>[앱 설치]</strong>{' '}
+                        선택
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        • <strong>삼성 인터넷</strong>: 우측 하단{' '}
+                        <strong>[ ≡ ] (줄 3개 메뉴)</strong> ➔{' '}
+                        <strong>[+ 현재 페이지 추가]</strong> ➔{' '}
+                        <strong style={{ color: 'var(--accent-primary)' }}>[홈 화면]</strong> 선택
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: 'var(--text-muted)',
-                  lineHeight: 1.65,
-                }}
-              >
-                <div>
-                  • <strong style={{ color: 'var(--text-main)' }}>갤럭시 크롬(Chrome)</strong>:
-                  우측 상단 <strong>[ ⋮ ]</strong> 메뉴 ➔{' '}
-                  <strong style={{ color: 'var(--accent-primary)' }}>
-                    [홈 화면에 추가]
-                  </strong>{' '}
-                  또는 <strong style={{ color: 'var(--accent-primary)' }}>[앱 설치]</strong>
-                </div>
-                <div style={{ marginTop: '4px' }}>
-                  • <strong style={{ color: 'var(--text-main)' }}>삼성 인터넷</strong>: 하단{' '}
-                  <strong>[ ≡ ]</strong> 메뉴 ➔ <strong>[현재 페이지 추가]</strong> ➔{' '}
-                  <strong style={{ color: 'var(--accent-primary)' }}>[홈 화면]</strong>
-                </div>
-                <div style={{ marginTop: '4px' }}>
-                  • <strong style={{ color: 'var(--text-main)' }}>아이폰/아이패드(Safari)</strong>
-                  : 하단 <strong>[공유]</strong> 버튼 ➔{' '}
-                  <strong style={{ color: 'var(--accent-primary)' }}>
-                    [홈 화면에 추가]
-                  </strong>
-                </div>
-              </div>
             </>
           )}
         </div>

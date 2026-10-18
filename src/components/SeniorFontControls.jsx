@@ -111,13 +111,14 @@ export default function SeniorFontControls({
             }}
             style={{
               padding: '8px 14px',
-              fontWeight: '800',
+              fontWeight: '900',
+              backgroundColor: 'var(--accent-primary)',
               borderColor: 'var(--accent-primary)',
-              color: 'var(--accent-primary)',
+              color: '#ffffff',
             }}
           >
             <Smartphone size={18} />
-            <span>앱 설치</span>
+            <span>📲 앱 설치</span>
           </button>
         )}
 
