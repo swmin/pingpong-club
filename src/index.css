@@ -465,3 +465,98 @@ button:active {
 .rank-2 { background-color: #94a3b8; color: #1e293b; }
 .rank-3 { background-color: #d97706; color: #fff; }
 .rank-other { background-color: var(--border-color); color: var(--text-main); }
+
+/* ============================================================
+   Responsive: 좌우 스크롤 없는 모바일 UI (카드형 순위표 / 선수별 대진표)
+   ============================================================ */
+
+/* 넓은 화면 = 표, 좁은 화면 = 카드 */
+.wide-only { display: block; }
+.narrow-only { display: none; }
+@media (max-width: 700px) {
+  .wide-only { display: none; }
+  .narrow-only { display: block; }
+}
+/* 결과 이미지 저장 시에는 항상 PC 너비의 표 형태로 렌더링 */
+.capture-wide .wide-only { display: block !important; }
+.capture-wide .narrow-only { display: none !important; }
+
+/* ---------- 카드형 순위표 ---------- */
+.rank-sortbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.rank-sortbar label { color: var(--text-muted); font-size: 14px; font-weight: 800; white-space: nowrap; }
+.rank-sortbar select {
+  flex: 1; min-width: 0;
+  background-color: var(--bg-main); color: var(--text-main);
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 15px; font-weight: 700;
+}
+
+.rank-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  display: block;
+}
+.rank-card.first { border-color: rgba(245, 158, 11, 0.7); background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), var(--bg-main) 60%); }
+.rank-card-top { display: flex; align-items: center; gap: 10px; }
+.rank-card-name { flex: 1; min-width: 0; font-weight: 800; font-size: var(--font-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-card-record { font-weight: 900; font-size: var(--font-base); white-space: nowrap; }
+.rank-card-sub { margin: 6px 0 0 48px; color: var(--text-muted); font-size: calc(14px * var(--font-scale)); line-height: 1.5; }
+.rank-card-reason {
+  margin: 8px 0 0 48px; padding: 8px 10px;
+  border: 1px dashed var(--border-color); border-radius: 10px;
+  background-color: var(--bg-card); font-size: calc(14px * var(--font-scale)); color: var(--text-main);
+}
+.rank-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  font-size: 12px; font-weight: 800; vertical-align: middle;
+  background-color: rgba(56, 189, 248, 0.15); color: var(--accent-primary);
+}
+.rank-chip.guest { background-color: rgba(168, 85, 247, 0.18); color: #c084fc; }
+
+/* ---------- 선수별 펼치기 대진표 ---------- */
+.player-draw-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: calc(14px * var(--font-scale)); font-weight: 800; margin-bottom: 6px;
+}
+.player-draw-linkbtn { background: none; border: none; color: var(--accent-primary); font-weight: 800; font-size: 14px; cursor: pointer; padding: 6px; }
+.player-draw-progress { height: 8px; border-radius: 999px; overflow: hidden; background-color: var(--bg-card); border: 1px solid var(--border-color); margin-bottom: 12px; }
+.player-draw-progress > div { height: 100%; background: linear-gradient(90deg, #38bdf8, #34d399); }
+
+.player-draw-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 10px; overflow: hidden; }
+.player-draw-card.open { border-color: rgba(56, 189, 248, 0.6); }
+.player-draw-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 12px 14px; background: transparent; border: none; color: inherit; font: inherit; cursor: pointer; text-align: left;
+}
+.player-draw-num { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: #0f172a; flex: none; }
+.player-draw-name { flex: 1; min-width: 0; font-weight: 800; font-size: var(--font-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-draw-chip { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 12px; font-weight: 800; vertical-align: middle; background-color: rgba(56, 189, 248, 0.15); color: var(--accent-primary); }
+.player-draw-chip.guest { background-color: rgba(168, 85, 247, 0.18); color: #c084fc; }
+.player-draw-record { white-space: nowrap; font-size: var(--font-base); }
+.player-draw-rank { font-size: 13px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background-color: var(--border-color); color: var(--text-main); white-space: nowrap; }
+.player-draw-rank.first { background-color: #f59e0b; color: #0f172a; }
+.player-draw-pending { padding: 0 14px 10px 52px; margin-top: -4px; font-size: 13px; font-weight: 800; color: var(--accent-primary); }
+
+.player-draw-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; min-height: 52px; border-top: 1px solid var(--border-color); }
+.player-draw-opp { flex: 1; min-width: 0; font-weight: 700; font-size: var(--font-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-draw-opp small { color: var(--text-muted); font-weight: 700; }
+.player-draw-score { font-weight: 900; font-size: var(--font-lg); min-width: 56px; text-align: center; }
+.player-draw-pill { font-size: 13px; font-weight: 900; padding: 3px 10px; border-radius: 999px; min-width: 42px; text-align: center; }
+.player-draw-pill.win { background-color: var(--accent-success-bg); color: var(--cell-text-win); }
+.player-draw-pill.loss { background-color: rgba(239, 68, 68, 0.18); color: var(--cell-text-loss); }
+.player-draw-pill.forfeit { background-color: rgba(168, 85, 247, 0.18); color: var(--accent-purple); }
+.player-draw-inbtn { background-color: var(--accent-primary); color: #0f172a; font-weight: 900; border: none; border-radius: 10px; padding: 10px 16px; font-size: 15px; cursor: pointer; }
+.player-draw-editbtn { background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 8px; }
+
+/* ---------- 좁은 화면 공통 다듬기 ---------- */
+@media (max-width: 700px) {
+  .matrix-table td:nth-child(2) { white-space: nowrap; }
+}

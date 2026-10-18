@@ -13,8 +13,9 @@ import CreateClubModal from './components/CreateClubModal';
 import ClubSelectModal from './components/ClubSelectModal';
 import CreateSessionModal from './components/CreateSessionModal';
 import SessionSelectModal from './components/SessionSelectModal';
+import PlayerDrawView from './components/PlayerDrawView';
 
-import { Grid, Calendar } from 'lucide-react';
+import { Grid, Calendar, Users } from 'lucide-react';
 
 // Release storage namespace (independent of old dev/test data keys)
 const STORAGE_CLUBS_KEY = 'pingpong_release_v1_clubs';
@@ -58,7 +59,12 @@ export default function App() {
   const [isTieBreakerOpen, setIsTieBreakerOpen] = useState(false);
 
   // Active View & Score Modal
-  const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'schedule'
+  // 'player' | 'schedule' | 'grid' — 좁은 화면(폰 세로)은 선수별 보기, 넓은 화면은 격자표를 기본으로 사용
+  const [activeTab, setActiveTab] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 700px)').matches
+      ? 'player'
+      : 'grid'
+  );
   const [selectedMatch, setSelectedMatch] = useState(null);
 
   // Senior Accessibility States
@@ -519,11 +525,11 @@ export default function App() {
         {/* View Tabs */}
         <div className="view-tabs" data-html2canvas-ignore="true">
           <button
-            className={`tab-btn ${activeTab === 'grid' ? 'active' : ''}`}
-            onClick={() => setActiveTab('grid')}
+            className={`tab-btn ${activeTab === 'player' ? 'active' : ''}`}
+            onClick={() => setActiveTab('player')}
           >
-            <Grid size={22} />
-            <span>종이 대진표 뷰 (격자표)</span>
+            <Users size={22} />
+            <span>선수별 보기</span>
           </button>
 
           <button
@@ -531,11 +537,19 @@ export default function App() {
             onClick={() => setActiveTab('schedule')}
           >
             <Calendar size={22} />
-            <span>순서별 경기 진행 뷰</span>
+            <span>경기 순서별</span>
+          </button>
+
+          <button
+            className={`tab-btn ${activeTab === 'grid' ? 'active' : ''}`}
+            onClick={() => setActiveTab('grid')}
+          >
+            <Grid size={22} />
+            <span>격자표</span>
           </button>
         </div>
 
-        {/* 2) 종이 대진표 (격자표) */}
+        {/* 2) 대진표 보기: 선수별(세로 스크롤만) / 경기 순서별 / 종이 대진표(격자표) */}
         {activeTab === 'grid' ? (
           <MatrixGridView
             players={players}
@@ -544,12 +558,34 @@ export default function App() {
             onSelectMatchCell={setSelectedMatch}
           />
         ) : (
-          <ScheduleView
-            players={players}
-            matches={matches}
-            rankingsMap={rankingsMap}
-            onSelectMatchCell={setSelectedMatch}
-          />
+          <>
+            <div data-capture-hide="true">
+              {activeTab === 'player' ? (
+                <PlayerDrawView
+                  players={players}
+                  matches={matches}
+                  rankingsMap={rankingsMap}
+                  onSelectMatchCell={setSelectedMatch}
+                />
+              ) : (
+                <ScheduleView
+                  players={players}
+                  matches={matches}
+                  rankingsMap={rankingsMap}
+                  onSelectMatchCell={setSelectedMatch}
+                />
+              )}
+            </div>
+            {/* 결과 이미지 저장 시에만 보이는 격자표 (화면에는 숨김) */}
+            <div data-capture-show="true" style={{ display: 'none' }}>
+              <MatrixGridView
+                players={players}
+                matches={matches}
+                rankingsMap={rankingsMap}
+                onSelectMatchCell={setSelectedMatch}
+              />
+            </div>
+          </>
         )}
 
         {/* 3) 실시간 대회 순위표 & 동호회 통산 누적 순위표 */}

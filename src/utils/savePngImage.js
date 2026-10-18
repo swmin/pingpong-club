@@ -184,6 +184,22 @@ function expandCloneForFullCapture(clonedEl, targetWidth) {
   }
 }
 
+/**
+ * Runs inside html2canvas' cloned document. The on-screen UI may be the phone-friendly
+ * card/accordion layout, but saved images should always use the full table/grid layout:
+ * - `.capture-wide` makes `.wide-only` (tables) visible and `.narrow-only` (cards) hidden
+ * - `[data-capture-hide]` (accordion/schedule views) is hidden, `[data-capture-show]` (grid) is shown
+ */
+function prepareWideCaptureLayout(clonedDoc) {
+  clonedDoc.documentElement.classList.add('capture-wide');
+  clonedDoc.querySelectorAll('[data-capture-hide]').forEach((el) => {
+    el.style.display = 'none';
+  });
+  clonedDoc.querySelectorAll('[data-capture-show]').forEach((el) => {
+    el.style.display = 'block';
+  });
+}
+
 function computeSafeScale(desiredScale, width, height) {
   const byDimension = Math.min(MAX_CANVAS_DIMENSION / width, MAX_CANVAS_DIMENSION / height);
   const byArea = Math.sqrt(MAX_CANVAS_AREA / (width * height));
@@ -224,8 +240,10 @@ export async function captureAndSavePNG(
       useCORS: true,
       logging: false,
       windowWidth: Math.max(targetWidth, window.innerWidth),
-      onclone: (_clonedDoc, clonedEl) => {
-        if (clonedEl) expandCloneForFullCapture(clonedEl, targetWidth);
+      onclone: (clonedDoc, clonedEl) => {
+        if (!clonedEl) return;
+        prepareWideCaptureLayout(clonedDoc);
+        expandCloneForFullCapture(clonedEl, targetWidth);
       },
     });
 

@@ -14,6 +14,8 @@ export default function RankingTable({
   const [activeTab, setActiveTab] = useState('session'); // 'session' | 'cumulative'
   // Cumulative table sort: null = default (current rank order)
   const [sortConfig, setSortConfig] = useState(null); // { key, dir: 'asc' | 'desc' }
+  // Narrow-screen rank cards that are expanded (tie-break reason visible)
+  const [openCardIds, setOpenCardIds] = useState(() => new Set());
 
   // Helper to format Korean date without duplicate "일" bug: e.g. "2026년 10월 4일 (일)"
   const getFormattedKoreanDate = (dateString) => {
@@ -174,6 +176,84 @@ export default function RankingTable({
     );
   };
 
+  // ---- Narrow screens: sort dropdown (replaces column-header sorting) ----
+  const SORT_OPTIONS = [
+    { value: 'rank', label: '순위순 (기본)', config: null },
+    { value: 'record:desc', label: '승수 많은 순', config: { key: 'record', dir: 'desc' } },
+    { value: 'diff:desc', label: '세트 득실차 순', config: { key: 'diff', dir: 'desc' } },
+    { value: 'ratio:desc', label: '세트 득실율 순', config: { key: 'ratio', dir: 'desc' } },
+    { value: 'matches:desc', label: '경기수 많은 순', config: { key: 'matches', dir: 'desc' } },
+    { value: 'name:asc', label: '이름 가나다순', config: { key: 'name', dir: 'asc' } },
+  ];
+  const currentSortValue = sortConfig ? `${sortConfig.key}:${sortConfig.dir}` : 'rank';
+  const handleSortSelect = (value) => {
+    const opt = SORT_OPTIONS.find(o => o.value === value);
+    setSortConfig(opt ? opt.config : null);
+  };
+
+  // ---- Narrow screens: one card per player (tap to see the tie-break reason) ----
+  const toggleCard = (id) => {
+    setOpenCardIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderRankCards = (list) => {
+    if (!list || list.length === 0) {
+      return (
+        <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          기록된 경기 데이터가 없습니다.
+        </div>
+      );
+    }
+
+    return list.map((st) => {
+      const open = openCardIds.has(st.id);
+      const badgeClass = st.rank === 1 ? 'rank-1' : st.rank === 2 ? 'rank-2' : st.rank === 3 ? 'rank-3' : 'rank-other';
+      const badgeText = st.rank === 1 ? '🥇' : st.rank === 2 ? '🥈' : st.rank === 3 ? '🥉' : (st.rank || '-');
+      const diffText = st.setDiff > 0 ? `+${st.setDiff}` : `${st.setDiff}`;
+      const diffColor = st.setDiff > 0 ? 'var(--accent-success)' : st.setDiff < 0 ? 'var(--accent-danger)' : 'inherit';
+
+      return (
+        <button
+          type="button"
+          key={st.id}
+          className={`rank-card ${st.rank === 1 ? 'first' : ''}`}
+          onClick={() => toggleCard(st.id)}
+          aria-expanded={open}
+        >
+          <div className="rank-card-top">
+            <span className={`rank-badge ${badgeClass}`}>{badgeText}</span>
+            <span className="rank-card-name">
+              {st.name}
+              <span className="rank-chip">{st.division}</span>
+              {st.player?.category === 'guest' && <span className="rank-chip guest">게스트</span>}
+            </span>
+            <span className="rank-card-record">
+              <span style={{ color: 'var(--accent-success)' }}>{st.wins}승</span>{' '}
+              <span style={{ color: 'var(--text-muted)' }}>{st.losses}패</span>
+              <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>{open ? '▴' : '▾'}</span>
+            </span>
+          </div>
+          <div className="rank-card-sub">
+            {st.matchesPlayed}전 · 세트 {st.setsWon}득 {st.setsLost}실 ·{' '}
+            <span style={{ color: diffColor, fontWeight: 800 }}>{diffText}</span> · 득실율{' '}
+            {st.setRatio ? st.setRatio.toFixed(2) : '0.00'}
+          </div>
+          {open && (
+            <div className="rank-card-reason">
+              📌 <strong>순위 결정 사유</strong><br />
+              {st.tieReason || '승수 반영'}
+            </div>
+          )}
+        </button>
+      );
+    });
+  };
+
   return (
     <div style={{ marginTop: '24px' }}>
       {/* Horizontal Tab Switcher Bar */}
@@ -268,7 +348,7 @@ export default function RankingTable({
             📌 오늘의 모임 진행 경기 결과를 바탕으로 실시간 산출된 순위입니다.
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
+          <div className="wide-only" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '600px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -286,6 +366,11 @@ export default function RankingTable({
                 {renderTableRows(rankings)}
               </tbody>
             </table>
+          </div>
+
+          {/* Narrow screens: card list (no horizontal scroll) */}
+          <div className="narrow-only">
+            {renderRankCards(rankings)}
           </div>
         </div>
       )}
@@ -334,7 +419,7 @@ export default function RankingTable({
             📌 <strong>[{clubName}]</strong> 동호회의 전체 {sessionsCount}개 모임 기록을 합산한 <strong>통산 누적 순위표</strong>입니다. (마지막 모임: {lastSessionDateFormatted || '최신'})
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
+          <div className="wide-only" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '600px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -356,6 +441,22 @@ export default function RankingTable({
                 {renderTableRows(sortedCumulative)}
               </tbody>
             </table>
+          </div>
+
+          {/* Narrow screens: sort dropdown + card list (no horizontal scroll) */}
+          <div className="narrow-only">
+            <div className="rank-sortbar" data-html2canvas-ignore="true">
+              <label htmlFor="cumulative-sort">정렬</label>
+              <select id="cumulative-sort" value={currentSortValue} onChange={(e) => handleSortSelect(e.target.value)}>
+                {SORT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+                {!SORT_OPTIONS.some(opt => opt.value === currentSortValue) && (
+                  <option value={currentSortValue}>표 머리글 정렬 사용 중</option>
+                )}
+              </select>
+            </div>
+            {renderRankCards(sortedCumulative)}
           </div>
         </div>
       )}
