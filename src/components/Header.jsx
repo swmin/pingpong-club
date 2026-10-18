@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Trophy, Download, Calendar, Users, HelpCircle, PlusCircle, Building2, Clock, CalendarPlus } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import confetti from 'canvas-confetti';
+import { captureAndSavePNG } from '../utils/savePngImage';
 
 export default function Header({
   leagueTitle,
@@ -53,53 +52,15 @@ export default function Header({
     const element = document.getElementById('export-area');
     if (!element) return;
 
-    try {
-      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const captureScale = isMobile ? 1.5 : 2;
+    const cleanTitle = (leagueTitle || '탁구리그').replace(/[/\\:*?"<>|]/g, '_');
+    const filename = `${currentDateValue}_${cleanTitle}_결과.png`;
 
-      const canvas = await html2canvas(element, {
-        scale: captureScale,
-        backgroundColor: '#0f172a',
-        useCORS: true,
-        logging: false,
-      });
-
-      // Filename: <동호회 만날 날짜>_<동호회이름>_결과.png
-      const cleanTitle = (leagueTitle || '탁구리그').replace(/[\/\\:*?"<>|]/g, '_');
-      const filename = `${currentDateValue}_${cleanTitle}_결과.png`;
-
-      // Use Blob + URL.createObjectURL for 100% Android Mobile / Galaxy Tab compatibility
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('이미지 생성에 실패했습니다.');
-          return;
-        }
-
-        const blobUrl = URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = blobUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Mobile fallback if browser blocks auto-download of link
-        if (isMobile) {
-          setTimeout(() => {
-            const win = window.open(blobUrl, '_blank');
-            if (!win) {
-              alert('🖼️ 갤러리에 저장하려면 생성된 이미지를 새 탭에서 열어 저장해 주세요.');
-            }
-          }, 300);
-        }
-
-        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-      }, 'image/png');
-    } catch (e) {
-      console.error(e);
-      alert('결과 이미지 저장 중 오류가 발생했습니다.');
-    }
+    await captureAndSavePNG(element, {
+      filename,
+      backgroundColor: '#0f172a',
+      confettiOptions: { particleCount: 60, spread: 70, origin: { y: 0.6 } },
+      errorMessage: '결과 이미지 저장 중 오류가 발생했습니다.',
+    });
   };
 
   return (
