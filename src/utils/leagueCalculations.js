@@ -79,6 +79,7 @@ export function generateSchedule(players, existingMatches = []) {
           playerBSets,
           status,
           winnerId,
+          updatedAt: (existing && existing.updatedAt) || 0,
         });
       }
     }

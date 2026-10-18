@@ -14,8 +14,11 @@ import ClubSelectModal from './components/ClubSelectModal';
 import CreateSessionModal from './components/CreateSessionModal';
 import SessionSelectModal from './components/SessionSelectModal';
 import PlayerDrawView from './components/PlayerDrawView';
+import SyncPanel from './components/SyncPanel';
+import useRoomSync from './hooks/useRoomSync';
+import { mergeIncomingMatches } from './utils/syncMerge';
 
-import { Grid, Calendar, Users } from 'lucide-react';
+import { Grid, Calendar, Users, Radio } from 'lucide-react';
 
 // Release storage namespace (independent of old dev/test data keys)
 const STORAGE_CLUBS_KEY = 'pingpong_release_v1_clubs';
@@ -234,6 +237,133 @@ export default function App() {
     });
   };
 
+  // ===== P2P 실시간 동기화 (함께 입력하기) =====
+  const [roomFromUrl] = useState(() => {
+    try {
+      const m = window.location.search.match(/[?&]room=(\d{4})/);
+      return m ? m[1] : '';
+    } catch {
+      return '';
+    }
+  });
+  const [isSyncOpen, setIsSyncOpen] = useState(() => Boolean(roomFromUrl));
+  const [hostTarget, setHostTarget] = useState(null); // 방장이 방을 연 모임 { clubId, sessionId }
+
+  // 방장: 방에 공유 중인 모임의 현재 상태 (변경될 때마다 참가자 전원에게 방송됨)
+  const hostClub = hostTarget ? clubs.find(c => c.id === hostTarget.clubId) : null;
+  const hostSession = hostClub ? (hostClub.sessions || []).find(s => s.id === hostTarget.sessionId) : null;
+  const syncSnapshot = hostClub && hostSession
+    ? { clubId: hostClub.id, clubName: hostClub.name, masterRoster: hostClub.masterRoster || [], session: hostSession }
+    : null;
+
+  const updateSessionById = (clubId, sessionId, updater) => {
+    setClubs(prev => prev.map(c => c.id !== clubId ? c : {
+      ...c,
+      sessions: (c.sessions || []).map(s => s.id === sessionId ? updater(s) : s),
+    }));
+  };
+
+  const sync = useRoomSync({
+    snapshot: syncSnapshot,
+    handlers: {
+      // [방장] 참가자/관리자가 입력한 점수를 최신 시각 기준으로 병합
+      onMatches: (incoming) => {
+        if (!hostTarget) return;
+        updateSessionById(hostTarget.clubId, hostTarget.sessionId, s => ({
+          ...s,
+          matches: mergeIncomingMatches(s.matches || [], incoming),
+        }));
+      },
+      // [방장] 관리자가 바꾼 선수 명단(당일 참가자 및 전체 명단) 반영 (기존 점수는 보존하며 대진표 재생성)
+      onRoster: (newPlayers, newMasterRoster) => {
+        if (!hostTarget) return;
+        setClubs(prev => prev.map(c => {
+          if (c.id !== hostTarget.clubId) return c;
+          const updatedRoster = Array.isArray(newMasterRoster) ? newMasterRoster : c.masterRoster;
+          const updatedSessions = Array.isArray(newPlayers)
+            ? (c.sessions || []).map(s => s.id !== hostTarget.sessionId ? s : {
+                ...s,
+                players: newPlayers,
+                matches: generateSchedule(newPlayers, s.matches || []),
+              })
+            : c.sessions;
+          return {
+            ...c,
+            masterRoster: updatedRoster,
+            sessions: updatedSessions,
+          };
+        }));
+      },
+      // [참가자] 방장이 보낸 모임 상태를 내 폰에 반영
+      onSnapshot: (snap, isFirst) => {
+        setClubs(prev => {
+          const incomingSession = snap.session;
+          const exists = prev.find(c => c.id === snap.clubId);
+          if (!exists) {
+            return [...prev, {
+              id: snap.clubId,
+              name: snap.clubName || '',
+              masterRoster: snap.masterRoster || [],
+              sessions: [incomingSession],
+              activeSessionId: incomingSession.id,
+              createdAt: Date.now(),
+            }];
+          }
+          return prev.map(c => {
+            if (c.id !== snap.clubId) return c;
+            const roster = [...(snap.masterRoster || [])];
+            (c.masterRoster || []).forEach(p => {
+              if (!roster.some(r => r.id === p.id)) roster.push(p);
+            });
+            const local = (c.sessions || []).find(s => s.id === incomingSession.id);
+            const merged = local
+              ? { ...local, ...incomingSession, matches: mergeIncomingMatches(incomingSession.matches || [], local.matches || []) }
+              : incomingSession;
+            const nextSessions = local
+              ? c.sessions.map(s => s.id === merged.id ? merged : s)
+              : [merged, ...(c.sessions || [])];
+            return {
+              ...c,
+              name: snap.clubName !== undefined ? snap.clubName : c.name,
+              masterRoster: roster,
+              sessions: nextSessions,
+              activeSessionId: isFirst ? merged.id : c.activeSessionId,
+            };
+          });
+        });
+        if (isFirst) {
+          setActiveClubId(snap.clubId);
+          setSelectedMatch(null);
+        }
+      },
+      // [참가자] 재접속 시 내 폰에 있는 점수를 방장에게 함께 전달
+      getLocalMatches: (t) => {
+        if (!t) return [];
+        const c = clubs.find(x => x.id === t.clubId);
+        const s = c && (c.sessions || []).find(x => x.id === t.sessionId);
+        return (s && s.matches) || [];
+      },
+    },
+  });
+
+  const handleStartHost = () => {
+    setHostTarget({ clubId: activeClub.id, sessionId: activeSession.id });
+    sync.startHost();
+  };
+
+  const handleLeaveSync = () => {
+    setHostTarget(null);
+    sync.leave();
+  };
+
+  // 참가자가 방에서 공유 중인 모임을 보고 있는지 (이때만 점수/명단 변경이 방장에게 전달됨)
+  const isGuestSyncedView =
+    sync.role === 'guest' &&
+    !!sync.target &&
+    sync.target.clubId === activeClub.id &&
+    sync.target.sessionId === activeSession.id;
+  const canEditRoster = !isGuestSyncedView || sync.isAdmin;
+
   // 1) Create New Club (Resets all rosters & active players to empty)
   const handleCreateClub = (name) => {
     const newClubId = `c_${Date.now()}`;
@@ -322,11 +452,14 @@ export default function App() {
 
   // Update Master Roster
   const handleUpdateMasterRoster = (newRoster) => {
+    if (isGuestSyncedView && !sync.isAdmin) return;
     updateActiveClub({ masterRoster: newRoster });
+    if (isGuestSyncedView) sync.sendRoster(null, newRoster);
   };
 
   // Toggle Participant Check-in for CURRENT ACTIVE SESSION ONLY
   const handleToggleParticipant = (player) => {
+    if (isGuestSyncedView && !sync.isAdmin) return;
     const isCurrentlyChecked = players.some(p => p.id === player.id);
     let updatedParticipants;
     if (isCurrentlyChecked) {
@@ -343,10 +476,12 @@ export default function App() {
     }
     const newMatches = generateSchedule(updatedParticipants, matches);
     updateActiveSession({ players: updatedParticipants, matches: newMatches });
+    if (isGuestSyncedView) sync.sendRoster(updatedParticipants);
   };
 
   // Update division for CURRENT ACTIVE SESSION ONLY (Historic Preservation!)
   const handleUpdateParticipantDivision = (playerId, newDivision) => {
+    if (isGuestSyncedView && !sync.isAdmin) return;
     const updatedParticipants = players.map(p => {
       if (p.id === playerId) {
         return { ...p, division: newDivision };
@@ -354,6 +489,7 @@ export default function App() {
       return p;
     });
     updateActiveSession({ players: updatedParticipants });
+    if (isGuestSyncedView) sync.sendRoster(updatedParticipants);
   };
 
   // Rename Club Title
@@ -363,14 +499,21 @@ export default function App() {
 
   // Generate schedule for active session (preserving scores)
   const handleGenerateNewSchedule = (newPlayers) => {
+    if (isGuestSyncedView && !sync.isAdmin) return;
     const newMatches = generateSchedule(newPlayers, matches);
     updateActiveSession({ players: newPlayers, matches: newMatches });
+    if (isGuestSyncedView) sync.sendRoster(newPlayers);
   };
 
   // Reset active session schedule
   const handleResetLeague = () => {
+    if (isGuestSyncedView) {
+      alert('경기 초기화는 방장 화면에서만 할 수 있습니다.');
+      return;
+    }
     if (confirm(`'${meetingDate}' 모임의 현재 경기 기록을 모두 초기화하고 새 대진표를 만드시겠습니까?`)) {
-      const freshMatches = generateSchedule(players, []);
+      const now = Date.now();
+      const freshMatches = generateSchedule(players, []).map(m => ({ ...m, updatedAt: now }));
       updateActiveSession({ matches: freshMatches });
     }
   };
@@ -460,8 +603,10 @@ export default function App() {
 
   // Save match score from ScoreModal
   const handleSaveScore = (updatedMatch) => {
-    const nextMatches = matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);
+    const stamped = { ...updatedMatch, updatedAt: Date.now() };
+    const nextMatches = matches.map(m => m.id === stamped.id ? stamped : m);
     updateActiveSession({ matches: nextMatches });
+    if (isGuestSyncedView) sync.sendScore(stamped);
     setSelectedMatch(null);
   };
 
@@ -513,14 +658,54 @@ export default function App() {
         />
 
         {/* 1) 3개 카테고리 (동호회/Guest/선수관리) 기반 참가 선수 명단 */}
-        <PlayerManager
-          masterRoster={masterRoster}
-          onUpdateMasterRoster={handleUpdateMasterRoster}
-          activeParticipants={players}
-          onToggleParticipant={handleToggleParticipant}
-          onUpdateParticipantDivision={handleUpdateParticipantDivision}
-          onGenerateNewSchedule={handleGenerateNewSchedule}
-        />
+        {canEditRoster ? (
+          <PlayerManager
+            masterRoster={masterRoster}
+            onUpdateMasterRoster={handleUpdateMasterRoster}
+            activeParticipants={players}
+            onToggleParticipant={handleToggleParticipant}
+            onUpdateParticipantDivision={handleUpdateParticipantDivision}
+            onGenerateNewSchedule={handleGenerateNewSchedule}
+          />
+        ) : (
+          <div
+            data-html2canvas-ignore="true"
+            style={{
+              marginBottom: '16px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              border: '1px dashed var(--border-color)',
+              color: 'var(--text-muted)',
+              fontWeight: '700',
+              fontSize: '14px',
+            }}
+          >
+            🔒 선수 명단은 방장·관리자만 바꿀 수 있습니다. (참가 선수 {players.length}명) 점수 입력은 아래에서 자유롭게 하세요.
+            <button className="btn-secondary" style={{ marginTop: '8px' }} onClick={() => setIsSyncOpen(true)}>
+              🔓 관리자 번호 입력
+            </button>
+          </div>
+        )}
+
+        {/* 실시간 동기화 (함께 입력하기) */}
+        <div data-html2canvas-ignore="true" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button className="btn-secondary" onClick={() => setIsSyncOpen(true)} style={{ fontWeight: '800' }}>
+            <Radio size={18} />
+            <span>
+              {sync.role === 'none'
+                ? '함께 입력하기'
+                : sync.role === 'host'
+                  ? `방 ${sync.code} (방장)`
+                  : `방 ${sync.code} (${sync.isAdmin ? '관리자' : '참가'})`}
+            </span>
+          </button>
+          {sync.role !== 'none' && (
+            <span style={{ fontSize: '14px', fontWeight: '800', color: sync.status === 'connected' ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+              ● {sync.status === 'connected' ? '실시간 연결됨' : sync.status === 'connecting' ? '연결 중...' : sync.status === 'reconnecting' ? '재연결 중...' : '연결 오류'}
+              {sync.role === 'host' && ` · ${sync.participants.filter((p) => p.online).length}명 접속`}
+            </span>
+          )}
+        </div>
 
         {/* View Tabs */}
         <div className="view-tabs" data-html2canvas-ignore="true">
@@ -609,6 +794,15 @@ export default function App() {
           onClose={() => setSelectedMatch(null)}
           onSaveScore={handleSaveScore}
           ttsEnabled={ttsEnabled}
+        />
+      )}
+
+      {/* P2P Realtime Sync Panel */}
+      {isSyncOpen && (
+        <SyncPanel
+          sync={{ ...sync, startHost: handleStartHost, leave: handleLeaveSync }}
+          initialCode={roomFromUrl}
+          onClose={() => setIsSyncOpen(false)}
         />
       )}
 

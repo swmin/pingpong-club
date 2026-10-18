@@ -12,7 +12,10 @@
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "html2canvas": "^1.4.1",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.41.0",
+    "peerjs": "^1.5.5",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
