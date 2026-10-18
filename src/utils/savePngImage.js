@@ -128,9 +128,73 @@ function showDownloadCompletePopup(filename, isMobileOrTablet) {
   document.body.appendChild(overlay);
 }
 
+// Minimum layout width used for the capture so phone/tablet portrait layouts
+// are rendered like a desktop page (no wrapped headers, no clipped tables).
+const CAPTURE_MIN_WIDTH = 1200;
+// Keep canvas within mobile browser limits (Android Chrome / Samsung Internet).
+const MAX_CANVAS_DIMENSION = 16000;
+const MAX_CANVAS_AREA = 40_000_000;
+
+/**
+ * Measures how wide the element must be so that every horizontally scrollable
+ * child (e.g. matrix grid, ranking tables with overflowX: auto) fits without clipping.
+ */
+function measureRequiredWidth(element) {
+  let maxHiddenOverflow = 0;
+  element.querySelectorAll('*').forEach((el) => {
+    const hidden = el.scrollWidth - el.clientWidth;
+    if (hidden > maxHiddenOverflow) maxHiddenOverflow = hidden;
+  });
+  const ownHidden = Math.max(0, element.scrollWidth - element.clientWidth);
+  return Math.ceil(
+    Math.max(CAPTURE_MIN_WIDTH, element.offsetWidth + Math.max(maxHiddenOverflow, ownHidden))
+  );
+}
+
+/**
+ * Runs inside html2canvas' cloned document: removes scroll/clip containers and
+ * widens the target element so the entire web page content is rendered.
+ */
+function expandCloneForFullCapture(clonedEl, targetWidth) {
+  const view = clonedEl.ownerDocument.defaultView;
+
+  const unclip = (el) => {
+    const cs = view.getComputedStyle(el);
+    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
+      el.style.overflow = 'visible';
+      el.style.overflowX = 'visible';
+      el.style.overflowY = 'visible';
+    }
+    if (cs.maxWidth !== 'none') el.style.maxWidth = 'none';
+    if (cs.maxHeight !== 'none') el.style.maxHeight = 'none';
+  };
+
+  unclip(clonedEl);
+  clonedEl.querySelectorAll('*').forEach(unclip);
+
+  clonedEl.style.boxSizing = 'border-box';
+  clonedEl.style.width = `${targetWidth}px`;
+  clonedEl.style.minWidth = `${targetWidth}px`;
+
+  // Grow further if any content still overflows after un-clipping
+  const finalWidth = Math.max(targetWidth, clonedEl.scrollWidth);
+  if (finalWidth > targetWidth) {
+    clonedEl.style.width = `${finalWidth}px`;
+    clonedEl.style.minWidth = `${finalWidth}px`;
+  }
+}
+
+function computeSafeScale(desiredScale, width, height) {
+  const byDimension = Math.min(MAX_CANVAS_DIMENSION / width, MAX_CANVAS_DIMENSION / height);
+  const byArea = Math.sqrt(MAX_CANVAS_AREA / (width * height));
+  return Math.max(0.5, Math.min(desiredScale, byDimension, byArea));
+}
+
 /**
  * Captures a DOM element via html2canvas and automatically downloads the PNG image
  * to the device's Download folder without triggering Android duplicate-download confirmation popups.
+ * The whole web page content is captured regardless of portrait/landscape orientation
+ * (horizontally scrolled tables are fully expanded).
  */
 export async function captureAndSavePNG(
   element,
@@ -149,13 +213,20 @@ export async function captureAndSavePNG(
       /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
       (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1);
 
-    const captureScale = isMobileOrTablet ? 1.5 : 2;
+    // Render at desktop width so the full page (not just the visible viewport) is captured
+    const targetWidth = measureRequiredWidth(element);
+    const estimatedHeight = Math.max(element.scrollHeight, 1);
+    const captureScale = computeSafeScale(isMobileOrTablet ? 1.5 : 2, targetWidth, estimatedHeight);
 
     const canvas = await html2canvas(element, {
       scale: captureScale,
       backgroundColor,
       useCORS: true,
       logging: false,
+      windowWidth: Math.max(targetWidth, window.innerWidth),
+      onclone: (_clonedDoc, clonedEl) => {
+        if (clonedEl) expandCloneForFullCapture(clonedEl, targetWidth);
+      },
     });
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
